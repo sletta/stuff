@@ -99,6 +99,7 @@ Item {
         try {
             description.text = loader.item.description
         } catch (e) {
+            print(e)
             description.text = "Benchmark is missing description..."
         }
     }
