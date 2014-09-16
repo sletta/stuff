@@ -32,22 +32,20 @@ Item {
         "blendedrect.qml",
         "opaquetexture.qml",
         "blendedtexture.qml",
+        "drawcalls.qml",
         "sprite-image.qml",
         "sprite-sequence.qml",
         "moving-images-animators.qml",
         "moving-images-animations.qml",
         "moving-images-script.qml",
+        "delegates.qml",
     ]
 
     Loader {
         id: loader
         anchors.fill: parent
         source: "benchmark/" + benchmarks[root.currentBenchmark]
-
-        onSourceChanged: print(source);
-
         asynchronous: true;
-
         onLoaded: {
             root.updateDescription()
         }

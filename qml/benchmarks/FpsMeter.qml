@@ -14,26 +14,18 @@ Rectangle {
     color: Qt.hsla(0, 0, 1, 0.9);
 
     Rectangle {
-        id: cross
+        id: swapTest
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
-        width: 1 * cm * 0.9
-        height: 0.1 * cm
-        color: "black"
-        border.color: "white"
-        antialiasing: true
-        NumberAnimation on rotation { from: 0; to: 360; duration: 5000; loops: Animation.Infinite }
-        onRotationChanged: {
-            root.tickCounter++;
-        }
 
-        Rectangle {
-            anchors.centerIn: parent
-            color: "black"
-            border.color: "white"
-            height: 1 * cm * 0.9
-            width: 0.1 * cm
-            antialiasing: true
+        width: 1 * cm
+        height: 1 * cm
+
+        property real t;
+        NumberAnimation on t { from: 0; to: 1; duration: 1000; loops: Animation.Infinite }
+        onTChanged: {
+            ++root.tickCounter;
+            color = (root.tickCounter % 2) == 0 ? "red" : "blue"
         }
     }
 
@@ -41,7 +33,7 @@ Rectangle {
         font.family: "Open Sans"
         font.pixelSize: cm
         anchors.verticalCenter: parent.verticalCenter
-        anchors.right: cross.left
+        anchors.right: swapTest.left
         anchors.margins: 0.5 * cm
         style: Text.Outline
         styleColor: "white"
