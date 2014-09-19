@@ -8,7 +8,11 @@ Window {
     property var startTime;
     property int frameCount: 0;
 
-    color: frameCount % 2 == 0 ? "red" : "blue"
+    Rectangle {
+        id: rect
+        color: root.frameCount % 2 == 0 ? "red" : "blue"
+        anchors.fill: parent
+    }
 
     property real t;
     NumberAnimation on t { from: 0; to: 1000; duration: 1000; loops: Animation.Infinite }

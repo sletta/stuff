@@ -83,6 +83,8 @@ int main(int argc, char ** argv)
            "EGLDisplay: %p\n",
            context, config, display);
 
+    // Assumes that 0 is a valid native window handle. This will be the case on
+    // many embedded systems, but not the case under X nor Android.
     surface = eglCreateWindowSurface(display, config, 0, NULL);
     printf("EGLSurface: %p\n", surface);
     eglMakeCurrent(display, surface, surface, context);

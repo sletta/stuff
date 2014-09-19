@@ -1,6 +1,9 @@
 import QtQuick 2.0
 import QtQuick.Window 2.0
 
+// This test only works on Qt 5.4 due to a bug in Window.color
+// when window is without any member items.
+
 Window {
 
     id: root
@@ -8,10 +11,7 @@ Window {
     property var startTime;
     property int frameCount: 0;
 
-    Rectangle {
-        color: root.frameCount % 2 == 0 ? "red" : "blue"
-        anchors.fill: parent
-    }
+    color: frameCount % 2 == 0 ? "red" : "blue"
 
     onFrameSwapped: {
         ++frameCount;
