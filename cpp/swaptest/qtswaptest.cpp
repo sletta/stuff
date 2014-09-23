@@ -46,14 +46,14 @@ public:
 
         if (frameCount == 0) {
 #if QT_VERSION >= 0x050300
-            qDebug() << "GL_VENDOR: " << func->glGetString(GL_VENDOR);
-            qDebug() << "GL_VENDOR: " << func->glGetString(GL_RENDERER);
-            qDebug() << "GL_VENDOR: " << func->glGetString(GL_VERSION);
+            qDebug() << "GL_VENDOR: " << (const char *) func->glGetString(GL_VENDOR);
+            qDebug() << "GL_RENDERER: " << (const char *) func->glGetString(GL_RENDERER);
+            qDebug() << "GL_VERSION: " << (const char *) func->glGetString(GL_VERSION);
 #else
             Q_UNUSED(func);
-            qDebug() << "GL_VENDOR: " << glGetString(GL_VENDOR);
-            qDebug() << "GL_VENDOR: " << glGetString(GL_RENDERER);
-            qDebug() << "GL_VENDOR: " << glGetString(GL_VERSION);
+            qDebug() << "GL_VENDOR: " << (const char *) glGetString(GL_VENDOR);
+            qDebug() << "GL_RENDERER: " << (const char *) glGetString(GL_RENDERER);
+            qDebug() << "GL_VERSION: " << (const char *) glGetString(GL_VERSION);
 #endif
         }
 
