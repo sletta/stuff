@@ -39,6 +39,7 @@ Item {
         "moving-images-animations.qml",
         "moving-images-script.qml",
         "delegates.qml",
+        "gaussblur.qml"
     ]
 
     Loader {
