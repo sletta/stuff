@@ -38,7 +38,13 @@ Item {
         "moving-images-animators.qml",
         "moving-images-animations.qml",
         "moving-images-script.qml",
-        "delegates.qml",
+        "delegates_rect.qml",
+        "delegates_tworects.qml",
+        "delegates_script.qml",
+        "delegates_image.qml",
+        "delegates_text.qml",
+        "delegates_longtext.qml",
+        "delegates_complex.qml",
         "gaussblur.qml"
     ]
 

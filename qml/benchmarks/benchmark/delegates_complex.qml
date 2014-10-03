@@ -6,10 +6,10 @@ Item {
     function simplify() { count = Math.max(1, count - increment); }
     property int increment: Math.log(count * count);
 
-    property string description: "Creating and deleting "
-                                 + count + " delegates per frame."
+    property string description: "Delegates per frame: "
+                                 + count + " Complex delegates."
 
-    property int count: 10;
+    property int count: 20;
 
     property real t;
     NumberAnimation on t { from: 0; to: 1; duration: 1000; loops: Animation.Infinite }
@@ -32,10 +32,15 @@ Item {
                 GradientStop { position: 1; color: "black" }
             }
             Text {
+                id: label
                 anchors.centerIn: parent
                 text: "hello"
                 color: "white"
                 font.pixelSize: 10
+            }
+            Component.onCompleted: {
+                var t = Math.round(Math.random() * 10) / 10;
+                label.text = label.text + " " + t;
             }
         }
     }
