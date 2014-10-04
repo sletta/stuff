@@ -26,6 +26,7 @@ Item {
     onWidthChanged: updateDescription()
     onHeightChanged: updateDescription()
 
+    property int pendingBenchmark: -1;
     property int currentBenchmark;
     property var benchmarks: [
         "solidrect.qml",
@@ -52,11 +53,42 @@ Item {
         id: loader
         anchors.fill: parent
         source: "benchmark/" + benchmarks[root.currentBenchmark]
-        asynchronous: true;
         onLoaded: {
             root.updateDescription()
+            spinner.running = false
+            spinner.opacity = 0
         }
+    }
 
+    onPendingBenchmarkChanged: {
+        if (pendingBenchmark >= 0) {
+            updateDescription();
+            switchBenchmark.start();
+        }
+    }
+
+    GradientSpinner {
+        id: spinner;
+        width: 3 * cm;
+        height: width;
+        anchors.centerIn: parent;
+        running: true;
+        duration: 500
+        circleWidth: 0.1 * cm;
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+    }
+
+    SequentialAnimation {
+        id: switchBenchmark
+        PropertyAction { target: spinner; property: "running"; value: true }
+        PropertyAction { target: spinner; property: "opacity"; value: 1 }
+        PauseAnimation { duration: 250 }
+        ScriptAction { script: {
+                var pending = root.pendingBenchmark;
+                root.pendingBenchmark = -1;
+                root.currentBenchmark = pending;
+            }
+        }
     }
 
     property real cm: 50;
@@ -83,16 +115,20 @@ Item {
             } catch (e) { print("complicate failed, " + e); }
         }
         onNext: {
+            if (pendingBenchmark >= 0)
+                return;
             var n = currentBenchmark + 1;
             if (n >= root.benchmarks.length)
                 n = 0;
-            currentBenchmark = n;
+            pendingBenchmark = n;
         }
         onPrevious: {
+            if (pendingBenchmark >= 0)
+                return;
             var n = currentBenchmark - 1;
             if (n < 0)
                 n = root.benchmarks.length - 1;
-            currentBenchmark = n;
+            pendingBenchmark = n;
         }
     }
 
@@ -104,9 +140,12 @@ Item {
     function updateDescription()
     {
         try {
-            description.text = loader.item.description
+            if (root.pendingBenchmark >= 0) {
+                description.text = "Loading: " + root.benchmarks[pendingBenchmark];
+            } else {
+                description.text = loader.item.description
+            }
         } catch (e) {
-            print(e)
             description.text = "Benchmark is missing description..."
         }
     }
