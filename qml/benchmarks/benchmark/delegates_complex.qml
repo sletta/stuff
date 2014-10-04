@@ -25,22 +25,25 @@ Item {
         Rectangle {
             x: Math.random() * root.width
             y: Math.random() * root.height
-            width: 30
-            height: 15
+            width: 100
+            height: 50
             gradient: Gradient {
                 GradientStop { position: 0; color: "steelblue" }
                 GradientStop { position: 1; color: "black" }
             }
-            Text {
-                id: label
-                anchors.centerIn: parent
-                text: "hello"
-                color: "white"
-                font.pixelSize: 10
-            }
-            Component.onCompleted: {
-                var t = Math.round(Math.random() * 10) / 10;
-                label.text = label.text + " " + t;
+            Repeater {
+                model: 10
+                Text {
+                    id: label
+                    x: (index % 2) * 50
+                    y: Math.floor(index / 2) * 10;
+                    width: 50
+                    height: 10
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "Item #" + index
+                    color: "white"
+                    font.pixelSize: 10
+                }
             }
         }
     }
