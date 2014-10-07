@@ -3,9 +3,9 @@ import QtQuick 2.2
 Item {
     id: root;
 
-    function complicate() { size = Math.max(1, size - 4); }
-    function simplify() { size = size == 1 ? 4 : size + 4; }
-
+    function complicate() { size = Math.max(1, size - increment); }
+    function simplify() { size = size == 1 ? 2 : size + increment; }
+    property int increment: size > 16 ? 2 : 1;
     property int size: 24;
     property int columns: width / size;
     property int rows: height / size;

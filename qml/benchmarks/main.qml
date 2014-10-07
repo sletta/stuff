@@ -1,16 +1,6 @@
 import QtQuick 2.0
 
 /*
-  - overdraw
-    - solid rectangles
-    - blended rectangles
-    - solid images
-    - blended images
-
-  - throughput
-    - moving images
-    - moving rectangles
-
   - complete tests
     - list scrolling
     - home screen scrolling
