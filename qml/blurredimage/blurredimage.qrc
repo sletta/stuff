@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>blurredimage.fsh</file>
+        <file>blurredimage.vsh</file>
+    </qresource>
+</RCC>
