@@ -122,7 +122,7 @@ public:
         if (!m_image.isNull()) {
 //            QElapsedTimer timer; timer.start();
 #ifdef DUMP_IMAGES
-            QImage result(m_image.width() * 4, m_image.height() * 2, QImage::Format_ARGB32_Premultiplied);
+            QImage result(m_image.width() * 4, m_image.height() * 2 + 1, QImage::Format_ARGB32_Premultiplied);
             result.fill(Qt::white);
             QPainter p(&result);
             p.setRenderHint(QPainter::SmoothPixmapTransform);
@@ -171,11 +171,17 @@ struct BlurImageState
 {
     float ratio;
     BlurryTexture *texture;
+
+    int compare(const BlurImageState *other) const {
+        if (texture == other->texture)
+            return int(ratio - other->ratio);
+        return qintptr(texture) - qintptr(other->texture);
+    }
 };
 
 class BlurImageShader : public QSGSimpleMaterialShader<BlurImageState>
 {
-    QSG_DECLARE_SIMPLE_SHADER(BlurImageShader, BlurImageState)
+    QSG_DECLARE_SIMPLE_COMPARABLE_SHADER(BlurImageShader, BlurImageState)
 
 public:
     BlurImageShader() {
