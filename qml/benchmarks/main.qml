@@ -36,6 +36,8 @@ Item {
         "delegates_text.qml",
         "delegates_longtext.qml",
         "delegates_complex.qml",
+        "delegates_labelcontrol.qml",
+        "delegates_buttoncontrol.qml",
         "gaussblur.qml"
     ]
 
