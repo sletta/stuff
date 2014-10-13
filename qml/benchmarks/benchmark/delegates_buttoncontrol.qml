@@ -26,7 +26,7 @@ Item {
         Button {
             x: Math.random() * root.width - width
             y: Math.random() * root.height - height
-            text: "Item #" + new Date().getTime();
+            text: "Item #" + index;
         }
     }
 }
