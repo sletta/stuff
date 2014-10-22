@@ -1,30 +1,30 @@
 import QtQuick 2.2
 
-Item {
+Benchmark {
     id: root;
 
-    function complicate() { size = Math.max(1, size - increment); }
-    function simplify() { size = size == 1 ? 2 : size + increment; }
-    property int increment: size > 16 ? 2 : 1;
-    property int size: 24;
-    property int columns: width / size;
-    property int rows: height / size;
+    property string description: count + " " + cellSize + "x" + cellSize + " sprites\nImages with animation";
+    property real cellSize: Math.floor(Math.sqrt(width * height / count))
+    property size srcSize: Qt.size(cellSize, cellSize);
 
-    property string description: (columns * rows) + " " + size + "x" + size + " sprites\nImages with animation";
+    count: 200
 
     Grid {
-        columns: root.columns
-        rows: root.rows
+        width: root.width
+        height: root.height
+        columns: Math.ceil(root.width / root.cellSize);
+        rows: Math.ceil(root.height / root.cellSize);
         Repeater {
-            model: root.rows * root.columns;
+            model: root.count
+
             Item {
                 id: sprite
-                width: root.size
-                height: root.size;
+                width: root.cellSize
+                height: root.cellSize
 
-                Image { id: imgWide; visible: false; source: "butterfly-wide.png"; sourceSize: Qt.size(root.size, root.size); }
-                Image { id: imgHalf; visible: false; source: "butterfly-half.png"; sourceSize: Qt.size(root.size, root.size); }
-                Image { id: imgSmall; visible: false; source: "butterfly-collapsed.png"; sourceSize: Qt.size(root.size, root.size); }
+                Image { id: imgWide; anchors.fill: parent; visible: false; source: "butterfly-wide.png"; sourceSize: root.srcSize }
+                Image { id: imgHalf; anchors.fill: parent; visible: false; source: "butterfly-half.png"; sourceSize: root.srcSize }
+                Image { id: imgSmall; anchors.fill: parent; visible: false; source: "butterfly-collapsed.png"; sourceSize: root.srcSize }
 
                 SequentialAnimation {
                     running: true

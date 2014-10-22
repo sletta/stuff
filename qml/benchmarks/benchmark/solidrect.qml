@@ -1,17 +1,8 @@
 import QtQuick 2.0
 
-Item {
+Benchmark {
     id: root;
-    function complicate() { count = count + increment; }
-    function simplify() { count = Math.max(1, count - increment); }
-    property int increment: (count >= 100
-                             ? 10
-                             : (count >= 50
-                                ? 5
-                                : count >= 10 ? 2 : 1
-                                )
-                             )
-    property int count: 16;
+    count: 16;
     property string description: "Rendering "
                                  + count + " opaque rectangle"
                                  + (count > 1 ? "s" : "");

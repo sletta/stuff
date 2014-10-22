@@ -1,22 +1,20 @@
 import QtQuick 2.2
 
-Item {
+Benchmark {
     id: root;
 
-    function complicate() { size = Math.max(1, size - 1); }
-    function simplify() { size = size == 1 ? 2 : size + 1; }
+    property int size: Math.sqrt(width * height / count);
+    property string description: count + " " + size + "x" + size + " Image instances\nAnimation with JavaScript";
 
-    property int size: 24;
-    property int columns: width / size;
-    property int rows: height / size;
-
-    property string description: (columns * rows) + " " + size + "x" + size + " textures\nAnimation includes JavaScript";
+    count: 500
 
     Grid {
-        columns: root.columns
-        rows: root.rows
+        width: root.width
+        height: root.height
+        columns: Math.ceil(root.width / root.size);
+        rows: Math.ceil(root.height / root.size);
         Repeater {
-            model: root.rows * root.columns;
+            model: root.count
             Image {
                 source: "butterfly-wide.png"
                 sourceSize: Qt.size(root.size, root.size);

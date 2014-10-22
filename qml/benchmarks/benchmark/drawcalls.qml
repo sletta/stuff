@@ -1,23 +1,24 @@
 import QtQuick 2.0
 
-Item {
+Benchmark {
     id: root;
     function complicate() { cellSize = Math.max(2, cellSize - increment); }
     function simplify() { cellSize = cellSize + increment; }
     property int increment: 2;
     property string description: "Rendering "
-                                 + cellCount + " rectangles using separate GL calls."
+                                 + count + " rectangles using separate GL calls."
 
-    property int cellSize: 40
-    property int cellCount: Math.floor(width / cellSize) * Math.ceil(height / cellSize)
+    property real cellSize: Math.floor(Math.sqrt(width * height / count))
+
+    count: 250
 
     Grid {
         width: root.width
         height: root.height
-        columns: root.width / root.cellSize
-        rows: root.height / root.cellSize
+        columns: Math.ceil(root.width / root.cellSize);
+        rows: Math.ceil(root.height / root.cellSize);
         Repeater {
-            model: root.cellCount
+            model: root.count
 
             ShaderEffect {
                 property color c: Qt.rgba(Math.random(), Math.random(), Math.random());

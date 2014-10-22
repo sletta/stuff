@@ -64,7 +64,7 @@ Item {
         width: 3 * cm;
         height: width;
         anchors.centerIn: parent;
-        running: true;
+        running: false;
         duration: 500
         circleWidth: 0.1 * cm;
         Behavior on opacity { NumberAnimation { duration: 200 } }
@@ -94,18 +94,15 @@ Item {
         id: ui;
         anchors.fill: parent
 
-        onComplicate: {
+        onAdd: {
             try {
-                loader.item.complicate()
-                root.updateDescription()
-            } catch (e) { print("complicate failed, " + e); }
+                loader.item.count = Math.max(0, loader.item.count + count);
+                root.updateDescription();
+            } catch (e) {
+                print("Changing count failed, " + e);
+            }
         }
-        onSimplify: {
-            try {
-                loader.item.simplify()
-                root.updateDescription()
-            } catch (e) { print("complicate failed, " + e); }
-        }
+
         onNext: {
             if (pendingBenchmark >= 0)
                 return;

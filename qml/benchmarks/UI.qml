@@ -3,8 +3,7 @@ import QtQuick 2.2
 Item {
     id: root
 
-    signal complicate
-    signal simplify
+    signal add(int count);
     signal next
     signal previous
 
@@ -59,21 +58,58 @@ Item {
             anchors.margins: 0.1 * cm;
             spacing: 0.1 * cm
 
-            Button {
-                text: "Complicate"
-                onClicked: {
-                    uiRoot.triggerFadeTimer()
-                    root.complicate()
+            Row {
+                Button {
+                    width: 1 * cm
+                    text: "+1"
+                    onClicked: {
+                        uiRoot.triggerFadeTimer()
+                        root.add(1)
+                    }
+                }
+                Button {
+                    width: 1 * cm
+                    text: "+10"
+                    onClicked: {
+                        uiRoot.triggerFadeTimer()
+                        root.add(10)
+                    }
+                }
+                Button {
+                    width: 1 * cm
+                    text: "+100"
+                    onClicked: {
+                        uiRoot.triggerFadeTimer()
+                        root.add(100)
+                    }
                 }
             }
-            Button {
-                text: "Simplify"
-                onClicked: {
-                    uiRoot.triggerFadeTimer()
-                    root.simplify()
+            Row {
+                Button {
+                    width: 1 * cm
+                    text: "-1"
+                    onClicked: {
+                        uiRoot.triggerFadeTimer()
+                        root.add(-1)
+                    }
+                }
+                Button {
+                    width: 1 * cm
+                    text: "-10"
+                    onClicked: {
+                        uiRoot.triggerFadeTimer()
+                        root.add(-10)
+                    }
+                }
+                Button {
+                    width: 1 * cm
+                    text: "-100"
+                    onClicked: {
+                        uiRoot.triggerFadeTimer()
+                        root.add(-100)
+                    }
                 }
             }
-
             Button {
                 text: "Next"
                 onClicked: {

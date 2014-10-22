@@ -26,6 +26,7 @@ Item {
             y: Math.random() * (root.height - height)
             text: "Qt Quick!"
             font.pixelSize: 10
+//            renderType: Text.NativeRendering
         }
     }
 }
