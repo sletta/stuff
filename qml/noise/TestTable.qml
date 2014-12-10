@@ -6,7 +6,7 @@ ShaderEffect
     id: effect
 
 	width: 640
-	height: 480
+	height: 640
 
 	FileContentTracker {
 		id: noiseTable
@@ -19,41 +19,35 @@ ShaderEffect
 	}
 
     property real textureScale: 10.0;
-
-    property real smoothed: 1.0;
-
-    MouseArea {
-        anchors.fill: parent
-        onPositionChanged: {
-            effect.textureScale = mouseY / 10.0;
-        }
-        onClicked: {
-            if (effect.smoothed > 0) {
-                effect.smoothed = 0;
-            } else {
-                effect.smoothed = 1.0;
-            }
-
-        }
-    }
+    property real aspectRatio: width / height;
 
     property real t;
-    UniformAnimator on t { from: 0; to: 1; duration: 50000; loops: Animation.Infinite }
+    SequentialAnimation on t {
+        UniformAnimator { from: 0; to: 1; duration: 5000; easing.type: Easing.InOutQuad }
+        UniformAnimator { from: 1; to: 0; duration: 5000; easing.type: Easing.InOutQuad }
+        loops: Animation.Infinite
+    }
+
+    // To keep performance decent on the 13" retina mbp. It doesn't
+    // have a GPU to cope with its screen size...
+    layer.enabled: true
+    layer.textureSize: Qt.size(effect.width / 4, effect.height / 4);
+    layer.smooth: false
 
 	fragmentShader: 
 	"#version 120\n"
-	+ noiseTable.content + "\n"
-	+ noiseFunctions.content + "\n"
+	 + noiseTable.content + "\n"
+	 + noiseFunctions.content + "\n"
 	+ "
-        uniform float smoothed;
-        uniform float textureScale;
+        uniform float textureScale;    
+        uniform float aspectRatio;
         uniform float t;
 
 		varying highp vec2 qt_TexCoord0;
 		void main() {
-            vec2 tc = qt_TexCoord0 / textureScale + vec2(t, 0.0);
-			float v = smoothed > 0 ? smoothNoise(tc) : noise(tc);
-			gl_FragColor = vec4(v, v, v, 1);
+            vec2 tc = qt_TexCoord0 * textureScale * vec2(aspectRatio, 1) + vec2(t * 10.0, 0.0);
+	 		float v = noise(tc);
+	      	gl_FragColor = vec4(v, 0, -v, 1);
 		}
 	"
 }
