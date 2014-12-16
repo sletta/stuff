@@ -24,6 +24,7 @@ Item {
         "opaquetexture.qml",
         "blendedtexture.qml",
         "changing_texts.qml",
+        "changing_textcanvas.qml",
         "drawcalls.qml",
         "sprite-image.qml",
         "sprite-sequence.qml",
