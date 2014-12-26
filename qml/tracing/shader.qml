@@ -30,6 +30,11 @@ ShaderEffect {
     property variant normals: textures.normalmapTexture
     property Image materials: Image { source: "reflection.png"; visible: false }
 
+    property Item noise: ShaderEffectSource {
+        sourceItem: Image { source: "noise.png" }
+        wrapMode: ShaderEffectSource.Repeat
+    }
+
     property variant matrix: Qt.matrix4x4();
 
     property variant cubeMatrix: Qt.matrix4x4();

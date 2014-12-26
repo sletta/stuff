@@ -25,6 +25,7 @@ Item {
         "blendedtexture.qml",
         "changing_texts.qml",
         "changing_textcanvas.qml",
+        "changing_text_oneofmany.qml",
         "drawcalls.qml",
         "sprite-image.qml",
         "sprite-sequence.qml",

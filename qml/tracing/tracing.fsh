@@ -9,6 +9,8 @@ uniform float tFast;
 uniform sampler2D normals;
 uniform sampler2D materials;
 
+uniform sampler2D noise;
+
 const float PI = 3.141592;
 const float PIHalf = PI * 0.5;
 const float PIx2 = PI * 2.0;
@@ -243,12 +245,42 @@ void hitSkymap(Ray r, inout Intersection i)
     }
 }
 
+vec2 noise( vec2 p ) {
+
+    float v = 0.0;          
+
+    float time = tSlow;
+    vec2 tv = vec2( time, time );
+
+    v += texture2D(noise, (p + tv) / 32.0 ).x;
+    v += texture2D(noise, (p - tv) / 32.0 ).y;
+    v += texture2D(noise, (-p + tv.yx) / 16.0 ).z;
+    v += texture2D(noise, (-p.yx - tv.yx) / 16.0 ).x;
+
+    const float sp = 1.0;
+    const float sr = 1.0;
+    v = smoothstep( sp, sp + sr, v );
+    v = v - smoothstep( 0.5, 1.0, v );
+
+    time = tSlow;
+    float w1 = 0.5 * sin( dot(p, vec2(0.2, 0.2)) * PIx2 + time * PIx2 ) + 0.5;
+    float w2 = 0.5 * sin( dot(p, vec2(0.2, 0.2)) * PIx2 * 2.0 + time * PIx2) + 0.5;
+    float w3 = 0.5 * sin( dot(p, vec2(0.2, 0.2)) * PIx2 * 4.0 + time * PIx2) + 0.5;
+    float w4 = 0.5 * sin( dot(p, vec2(0.2, 0.2)) * PIx2 * 8.0 + time * PIx2) + 0.5;
+
+    float w = dot(vec4(w1, w2, w3, w4), vec4(0.9, 0.05, 0.025, 0.025));
+
+    return smoothstep(0.0, 1.0, vec2(w, v));
+}
+
+
 float waterElevation(vec2 p)
 {
-    float a = tSlow * PIx2;
-    float b = tFast * PIx2;
-    return  0.02 + 0.005 * sin(length(p.xy) * 4.0 + a - b)
-            + 0.005 * sin(a * 2.0 + p.x * 4.0);
+    // float a = tSlow * PIx2;
+    // float b = tFast * PIx2;
+    // return  0.02 + 0.005 * sin(length(p.xy) * 4.0 + a - b)
+    //         + 0.005 * sin(a * 2.0 + p.x * 4.0);
+    return 0.1 * dot( noise( p ), vec2( 0.8, 0.03 ) );
 }
 
 void hitWater(Ray r, inout Intersection i)
@@ -261,7 +293,7 @@ void hitWater(Ray r, inout Intersection i)
     if (t > 0.001 && t < i.t) {
         vec3 p = r.origin + r.direction * t;
 
-        const float D = 0.0001;
+        const float D = 0.1;
         vec3 p0 = vec3(p.x, waterElevation(p.xz), p.z);
         vec3 p1 = vec3(p.x + D, waterElevation(p.xz + vec2(D, 0)), p.z);
         vec3 p2 = vec3(p.x, waterElevation(p.xz + vec2(0, D)), p.z + D);
@@ -354,7 +386,7 @@ void main()
     vec3 color = vec3(0, 0, 0);
 
     int iterations = 8;
-    while (--iterations >= 0) {
+    while (--iterations >= 0) { 
         i.t = INF;
         i.type = vec4(0, 0, 0, 0);
         i.color = vec3(0, 0, 0);
