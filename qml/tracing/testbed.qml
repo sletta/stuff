@@ -6,6 +6,7 @@ TracingBase {
 
     includeNoise: shaderSource.indexOf("USE_NOISE") >= 0;
     animatedTime: shaderSource.indexOf("ANIMATE_TIME") >= 0;
+    textureScale: shaderSource.indexOf("LOWRES") >= 0 ? 4 : 1;
 
     FolderListModel {
         id: folderModel
@@ -21,6 +22,7 @@ TracingBase {
             var name = folderModel.get(index, "fileName");
             print("now activating shader: " + name);
             root.shaderFile = folderModel.folder + "/" + name;
+            root.resetMatrix();
         }
     }
 

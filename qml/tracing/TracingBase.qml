@@ -43,13 +43,21 @@ Item {
                                      m[12], m[13], m[14], m[15]);
     }
 
+    property real textureScale: 1
+
+    function resetMatrix() {
+        navigator.matrix = new Math3D.mat4();
+        navigator.matrix.translate(0, 1.0, 4);
+        navigator.matrix.rotateAroundX(-0.5);
+        updateMatrix();
+    }
+
     Navigator {
         id: navigator;
         anchors.fill: parent
         onChanged: updateMatrix();
         Component.onCompleted: {
-            matrix.translate(0, 0, 2);
-            updateMatrix();
+            resetMatrix();
         }
     }
 
@@ -58,12 +66,15 @@ Item {
         id: effect
 
         anchors.fill: parent
-
         fragmentShader: root.fragmentShader
 
         property var resolution: Qt.vector2d(width, height)
         property var matrix;
         property var time;
+
+        layer.enabled: root.textureScale > 1;
+        layer.textureSize: Qt.size(root.width / textureScale, root.height / textureScale);
+        layer.smooth: false;
 
         UniformAnimator on time { 
             id: timeAnimator
