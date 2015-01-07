@@ -2,9 +2,11 @@ import QtQuick 2.0
 
 Benchmark {
     id: root;
+
     property string description: "Rendering "
                                  + count + " blended rectangle"
                                  + (count > 1 ? "s" : "");
+
     Repeater {
         model: root.count;
         Rectangle {

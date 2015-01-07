@@ -72,16 +72,6 @@ Rectangle {
                 }
             "
 
-            OverlayUI {
-                controls: [
-                    { name: "Scale", 
-                      type: "float", 
-                      lowerBound: 0, 
-                      upperBound: 64
-                    }
-                ]
-            }
-
         }
 
         ShaderEffect {
