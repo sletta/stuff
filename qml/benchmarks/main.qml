@@ -96,6 +96,8 @@ Item {
 
     UI {
         id: ui;
+
+        clip: true
         anchors.fill: parent
 
         onAdd: {
@@ -126,6 +128,7 @@ Item {
     }
 
     FpsMeter {
+        clip: true
         anchors.bottom: parent.bottom
         anchors.right: parent.right
     }

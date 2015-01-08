@@ -93,13 +93,19 @@ private:
 struct Options
 {
     Options()
-        : bmTemplate("Shell.qml")
-        , fullscreen(false)
+        : fullscreen(false)
+        , verbose(false)
+        , fpsTolerance(0.05)
+        , fpsInterval(1000)
     {
     }
 
     QString bmTemplate;
     bool fullscreen;
+    bool verbose;
+    qreal fpsTolerance;
+    qreal fpsInterval;
+    qreal targetFps;
 };
 
 
@@ -109,12 +115,14 @@ struct Benchmark
     Benchmark(const QString &file)
         : fileName(file)
         , completed(false)
+        , operationsPerFrame(0)
     {
     }
 
     QString fileName;
 
     bool completed;
+    qreal operationsPerFrame;
 };
 
 
@@ -122,6 +130,17 @@ struct Benchmark
 class BenchmarkRunner : public QObject
 {
     Q_OBJECT
+
+    // None of these are strictly constant, but for the sake of one QML run, they are
+    // so flag it for simplicity
+    Q_PROPERTY(QQuickView *view READ view CONSTANT)
+    Q_PROPERTY(QQmlComponent *component READ component CONSTANT)
+    Q_PROPERTY(qreal screeRefreshRate READ screenRefreshRate CONSTANT)
+    Q_PROPERTY(QString input READ input CONSTANT)
+    Q_PROPERTY(qreal fpsTolerance READ fpsTolerance CONSTANT)
+    Q_PROPERTY(qreal fpsInterval READ fpsInterval CONSTANT)
+    Q_PROPERTY(bool verbose READ verbose CONSTANT)
+
 public:
     BenchmarkRunner();
 
@@ -130,16 +149,28 @@ public:
     QList<Benchmark> benchmarks;
     Options options;
 
-public slots:
-//    void recordResults(qreal opsPerSecond);
+    QQuickView *view() const { return m_view; }
+    QQmlComponent *component() const { return m_component; }
+    qreal screenRefreshRate() const { return m_view->screen()->refreshRate(); }
+    QString input() const { return benchmarks[m_currentBenchmark].fileName; }
 
-    void maybeStartNext();
-    void start();
-//    void complete();
+    qreal fpsTolerance() const { return options.fpsTolerance / 100.0; }
+    qreal fpsInterval() const { return options.fpsInterval; }
+
+    bool verbose() const { return options.verbose; }
+
+public slots:
+    void recordOperationsPerFrame(qreal count);
+    void complete();
     void abort();
-    void abortAll();
+
+private slots:
+    void start();
 
 private:
+    void maybeStartNext();
+    void abortAll();
+
     int m_currentBenchmark;
 
     QQuickView *m_view;
@@ -157,13 +188,31 @@ int main(int argc, char **argv)
     QCommandLineOption decideFpsOption(QStringLiteral("decide-fps"), QStringLiteral("Run a simple test to decide the frame rate of the primary screen"));
     parser.addOption(decideFpsOption);
 
+    QCommandLineOption verboseOption(QStringList() << QStringLiteral("v") << QStringLiteral("verbose"),
+                                     QStringLiteral("Verbose mode"));
+    parser.addOption(verboseOption);
+
+    QCommandLineOption fpsIntervalOption(QStringLiteral("fps-interval"),
+                                         QStringLiteral("Set the interval used to measure framerate in ms. Higher values lead to more stable test results"),
+                                         QStringLiteral("interval"),
+                                         QStringLiteral("1000"));
+    parser.addOption(fpsIntervalOption);
+
+    QCommandLineOption fpsToleranceOption(QStringLiteral("fps-tolerance"),
+                                          QStringLiteral("The amount of deviance tolerated from the target frame rate in %. Lower value leads to more accurate results"),
+                                          QStringLiteral("tolerance"),
+                                          QStringLiteral("5"));
+    parser.addOption(fpsToleranceOption);
+
     QCommandLineOption fullscreenOption(QStringLiteral("fullscreen"), QStringLiteral("Run graphics in fullscreen mode"));
     parser.addOption(fullscreenOption);
 
 //    QCommandLineOption excludeRenderOption(QStringLiteral("exclude-rendering"),
 //                                           QStringLiteral("Only object instantiation will be benchmarked, render is not measured"));
-//    QCommandLineOption templateOption(QStringList() << QStringLiteral("t") << QStringLiteral("template"),
-//                                           QStringLiteral("What kind of benchmark template to run"));
+    QCommandLineOption templateOption(QStringList() << QStringLiteral("s") << QStringLiteral("shell"),
+                                      QStringLiteral("What kind of benchmark shell to run. Available options are: 'sustained-fps'"),
+                                      QStringLiteral("template"));
+    parser.addOption(templateOption);
 
 
     parser.addPositionalArgument(QStringLiteral("input"),
@@ -186,7 +235,16 @@ int main(int argc, char **argv)
     }
 
     BenchmarkRunner runner;
+    runner.options.verbose = parser.isSet(verboseOption);
     runner.options.fullscreen = parser.isSet(fullscreenOption);
+    runner.options.fpsInterval = qMax<qreal>(500, parser.value(fpsIntervalOption).toFloat());
+    runner.options.fpsTolerance = qMax<qreal>(1, parser.value(fpsToleranceOption).toFloat());
+    runner.options.bmTemplate = parser.value(templateOption);
+
+    if (runner.options.bmTemplate == QStringLiteral("sustained-fps"))
+        runner.options.bmTemplate = QStringLiteral("Shell_SustainedFpsWithCount.qml");
+    else
+        runner.options.bmTemplate = QStringLiteral("Shell_SustainedFpsWithCount.qml");
 
     foreach (QString input, parser.positionalArguments()) {
         QFileInfo info(input);
@@ -199,6 +257,17 @@ int main(int argc, char **argv)
             while (iterator.hasNext()) {
                 runner.benchmarks << Benchmark(iterator.next());
             }
+        }
+    }
+
+    if (runner.options.verbose) {
+        qDebug() << "Fullscreen ......:" << (runner.options.fullscreen ? "yes" : "no");
+        qDebug() << "Fps Interval ....:" << runner.options.fpsInterval;
+        qDebug() << "Fps Tolerance ...:" << runner.options.fpsTolerance;
+        qDebug() << "Template ........:" << runner.options.bmTemplate;
+        qDebug() << "Benchmarks:";
+        foreach (const Benchmark &b, runner.benchmarks) {
+            qDebug() << " -" << b.fileName;
         }
     }
 
@@ -233,17 +302,12 @@ void BenchmarkRunner::start()
         return;
     }
 
-    m_view = new QQuickView();
-    m_view->setSource(QUrl::fromLocalFile(options.bmTemplate));
-
-    if (!m_view->rootObject()) {
-        qDebug() << "no root object..";
-        abortAll();
-        return;
-    }
-
     const Benchmark &bm = benchmarks.at(m_currentBenchmark);
     qDebug() << "running:" << bm.fileName;
+
+    m_view = new QQuickView();
+    m_view->setResizeMode(QQuickView::SizeRootObjectToView);
+    m_view->rootContext()->setContextProperty("benchmark", this);
 
     m_component = new QQmlComponent(m_view->engine(), bm.fileName);
     if (m_component->status() != QQmlComponent::Ready) {
@@ -252,23 +316,9 @@ void BenchmarkRunner::start()
         return;
     }
 
-    m_view->rootObject()->dumpObjectTree();
-
-    QObject *bmShell = 0;
-    if (m_view->rootObject()->objectName() == QStringLiteral("benchmarkShell"))
-        bmShell = m_view->rootObject();
-    else
-        bmShell = m_view->rootObject()->findChild<QQuickItem *>("benchmarkShell");
-
-    if (!bmShell) {
-        qDebug() << "no 'benchmarkShell' in" << options.bmTemplate;
-        abortAll();
-        return;
-    }
-
-    bool ok = bmShell->setProperty("benchmarkDelegate", QVariant::fromValue(m_component));
-    if (!ok) {
-        qDebug() << "failed to set 'benchmarkDelegate' in" << options.bmTemplate;
+    m_view->setSource(QUrl::fromLocalFile(options.bmTemplate));
+    if (!m_view->rootObject()) {
+        qDebug() << "no root object..";
         abortAll();
         return;
     }
@@ -282,8 +332,8 @@ void BenchmarkRunner::start()
 void BenchmarkRunner::maybeStartNext()
 {
     ++m_currentBenchmark;
-    if (benchmarks.size() < m_currentBenchmark) {
-        start();
+    if (m_currentBenchmark < benchmarks.size()) {
+        QMetaObject::invokeMethod(this, "start", Qt::QueuedConnection);
     } else {
         qDebug() << "All done...";
         qApp->quit();
@@ -299,6 +349,24 @@ void BenchmarkRunner::abortAll()
 {
     qDebug() << "Aborting all benchmarks...";
     qApp->quit();
+}
+
+void BenchmarkRunner::recordOperationsPerFrame(qreal ops)
+{
+    benchmarks[m_currentBenchmark].completed = true;
+    benchmarks[m_currentBenchmark].operationsPerFrame = ops;
+    qDebug() << "    " << ops << "ops/frame";
+    complete();
+}
+
+void BenchmarkRunner::complete()
+{
+    m_view->deleteLater();
+    m_view = 0;
+    m_component->deleteLater();
+    m_component = 0;
+
+    maybeStartNext();
 }
 
 #include "main.moc"
