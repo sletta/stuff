@@ -1,11 +1,8 @@
 import QtQuick 2.0
 
-Benchmark {
+Item {
     id: root;
-    count: 16;
-    property string description: "Rendering "
-                                 + count + " opaque rectangle"
-                                 + (count > 1 ? "s" : "");
+    property int count: 16;
     Repeater {
         model: root.count;
         Rectangle {

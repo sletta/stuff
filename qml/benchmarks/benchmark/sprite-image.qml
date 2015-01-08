@@ -1,13 +1,12 @@
 import QtQuick 2.2
 
-Benchmark {
+Item {
     id: root;
 
-    property string description: count + " " + cellSize + "x" + cellSize + " sprites\nImages with animation";
     property real cellSize: Math.floor(Math.sqrt(width * height / count))
     property size srcSize: Qt.size(cellSize, cellSize);
 
-    count: 200
+    property int count: 200
 
     Grid {
         width: root.width

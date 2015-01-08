@@ -1,11 +1,10 @@
 import QtQuick 2.0
 
-Benchmark {
+Item {
     id: root;
 
-    property string description: "Rendering "
-                                 + count + " opaque texture"
-                                 + (count > 1 ? "s" : "");
+    property int count;
+
     Repeater {
         model: root.count;
         Rectangle {

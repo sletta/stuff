@@ -3,10 +3,7 @@ import QtGraphicalEffects 1.0
 
 Item {
     id: root;
-    function complicate() { sampleCount = Math.min(32, sampleCount+1); }
-    function simplify() { sampleCount = Math.max(2, sampleCount-1); }
-    property int sampleCount: 8
-    property string description: "Gaussian Blur with " + sampleCount + " samples";
+    property int count: 8
 
     width: 600
     height: 600

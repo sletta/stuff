@@ -14,6 +14,7 @@ Item {
             object.anchors.fill = benchmarkRoot;
             root.targetFrameRate = benchmark.screeRefreshRate;
             root.item = object;
+            label.updateYerself()
         }
     }
 
@@ -30,18 +31,22 @@ Item {
         anchors.fill: parent
     }
 
-    Item {
+    Rectangle {
         id: meter
 
         clip: true
-        width: 10
-        height: 10
+        width: root.width
+        height: 14
         anchors.right: parent.right
         anchors.bottom: parent.bottom
 
+        color: Qt.hsla(0, 0, 1, 0.8);
+
         Rectangle {
             id: swapTest
-            anchors.fill: parent
+            anchors.right: parent.right
+            width: parent.height
+            height: parent.height
             property real t;
             NumberAnimation on t { from: 0; to: 1; duration: 1000; loops: Animation.Infinite }
             property bool inv;
@@ -83,10 +88,12 @@ Item {
                 swapCountDown = 5;
             }
             function frameSwapped() {
+                print("   - swapped..." + item.count);
                 if (!running && --swapCountDown < 0) {
                     tick = 0;
                     lastFrameTime = new Date();
                     start();
+                    print("   -> started..");
                 }
             }
 
@@ -110,7 +117,7 @@ Item {
                 var errorRatio = Math.abs(1 - root.fps / root.targetFrameRate);
                 var ok = errorRatio < benchmark.fpsTolerance
 
-                if (knownBad > 0 && Math.abs(knownGood - knownBad) <= 2) {
+                if (knownBad > 0 && Math.abs(knownGood - knownBad) < 2) {
                     fpsTimer.stop();
                     benchmark.recordOperationsPerFrame(ok ? item.count : knownGood);
                     return;
@@ -137,6 +144,22 @@ Item {
                     item.count -= decr;
                     startOver();
                 }
+
+                label.updateYerself();
+            }
+        }
+
+        Text {
+            id: label
+            anchors.centerIn: parent
+            font.pixelSize: 10
+
+            function updateYerself() {
+                var bmName = benchmark.input;
+                var lastSlash = bmName.lastIndexOf("/");
+                if (lastSlash > 0)
+                    bmName = bmName.substr(lastSlash + 1);
+                text = "ops/frame: " + item.count + " - " + bmName;
             }
         }
 

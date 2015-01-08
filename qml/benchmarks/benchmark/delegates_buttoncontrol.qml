@@ -3,13 +3,6 @@ import QtQuick.Controls 1.0
 
 Item {
     id: root;
-    function complicate() { count += increment; }
-    function simplify() { count = Math.max(1, count - increment); }
-    property int increment: Math.log(count * count);
-
-    property string description: "Delegates per frame: "
-                                 + count + " Button controls."
-
     property int count: 20;
 
     property real t;

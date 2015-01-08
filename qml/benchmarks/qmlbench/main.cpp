@@ -122,6 +122,7 @@ struct Benchmark
     }
 
     QString fileName;
+    QSize windowSize;
 
     bool completed;
     qreal operationsPerFrame;
@@ -168,9 +169,9 @@ public slots:
 
 private slots:
     void start();
+    void maybeStartNext();
 
 private:
-    void maybeStartNext();
     void abortAll();
 
     int m_currentBenchmark;
@@ -234,6 +235,7 @@ int main(int argc, char **argv)
             fpsDecider.showFullScreen();
         else
             fpsDecider.show();
+        fpsDecider.raise();
         return app.exec();
     }
 
@@ -313,7 +315,7 @@ void BenchmarkRunner::start()
         return;
     }
 
-    const Benchmark &bm = benchmarks.at(m_currentBenchmark);
+    Benchmark &bm = benchmarks[m_currentBenchmark];
     qDebug() << "running:" << bm.fileName;
 
     m_view = new QQuickView();
@@ -338,6 +340,9 @@ void BenchmarkRunner::start()
         m_view->showFullScreen();
     else
         m_view->show();
+    m_view->raise();
+
+    bm.windowSize = m_view->size();
 }
 
 void BenchmarkRunner::maybeStartNext()
@@ -364,8 +369,9 @@ void BenchmarkRunner::abortAll()
 
 void BenchmarkRunner::recordOperationsPerFrame(qreal ops)
 {
-    benchmarks[m_currentBenchmark].completed = true;
-    benchmarks[m_currentBenchmark].operationsPerFrame = ops;
+    Benchmark &bm = benchmarks[m_currentBenchmark];
+    bm.completed = true;
+    bm.operationsPerFrame = ops;
     qDebug() << "    " << ops << "ops/frame";
     complete();
 }
@@ -377,7 +383,7 @@ void BenchmarkRunner::complete()
     m_component->deleteLater();
     m_component = 0;
 
-    maybeStartNext();
+    QMetaObject::invokeMethod(this, "maybeStartNext", Qt::QueuedConnection);
 }
 
 #include "main.moc"
