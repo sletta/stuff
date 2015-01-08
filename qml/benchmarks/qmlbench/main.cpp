@@ -97,6 +97,7 @@ struct Options
         , verbose(false)
         , fpsTolerance(0.05)
         , fpsInterval(1000)
+        , fpsOverride(0)
     {
     }
 
@@ -105,6 +106,7 @@ struct Options
     bool verbose;
     qreal fpsTolerance;
     qreal fpsInterval;
+    qreal fpsOverride;
     qreal targetFps;
 };
 
@@ -151,7 +153,7 @@ public:
 
     QQuickView *view() const { return m_view; }
     QQmlComponent *component() const { return m_component; }
-    qreal screenRefreshRate() const { return m_view->screen()->refreshRate(); }
+    qreal screenRefreshRate() const { return options.fpsOverride > 0 ? options.fpsOverride : m_view->screen()->refreshRate(); }
     QString input() const { return benchmarks[m_currentBenchmark].fileName; }
 
     qreal fpsTolerance() const { return options.fpsTolerance / 100.0; }
@@ -181,6 +183,8 @@ private:
 
 int main(int argc, char **argv)
 {
+    qmlRegisterType<QQuickView>();
+
 	QGuiApplication app(argc, argv);	
 
 	QCommandLineParser parser;
@@ -204,11 +208,14 @@ int main(int argc, char **argv)
                                           QStringLiteral("5"));
     parser.addOption(fpsToleranceOption);
 
+    QCommandLineOption fpsOverrideOption(QStringLiteral("fps-override"),
+                                         QStringLiteral("Override QScreen::refreshRate() with a custom refreshrate"),
+                                         QStringLiteral("framerate"));
+    parser.addOption(fpsOverrideOption);
+
     QCommandLineOption fullscreenOption(QStringLiteral("fullscreen"), QStringLiteral("Run graphics in fullscreen mode"));
     parser.addOption(fullscreenOption);
 
-//    QCommandLineOption excludeRenderOption(QStringLiteral("exclude-rendering"),
-//                                           QStringLiteral("Only object instantiation will be benchmarked, render is not measured"));
     QCommandLineOption templateOption(QStringList() << QStringLiteral("s") << QStringLiteral("shell"),
                                       QStringLiteral("What kind of benchmark shell to run. Available options are: 'sustained-fps'"),
                                       QStringLiteral("template"));
@@ -240,6 +247,8 @@ int main(int argc, char **argv)
     runner.options.fpsInterval = qMax<qreal>(500, parser.value(fpsIntervalOption).toFloat());
     runner.options.fpsTolerance = qMax<qreal>(1, parser.value(fpsToleranceOption).toFloat());
     runner.options.bmTemplate = parser.value(templateOption);
+    if (parser.isSet(fpsOverrideOption))
+        runner.options.fpsOverride = parser.value(fpsOverrideOption).toFloat();
 
     if (runner.options.bmTemplate == QStringLiteral("sustained-fps"))
         runner.options.bmTemplate = QStringLiteral("Shell_SustainedFpsWithCount.qml");
@@ -261,10 +270,12 @@ int main(int argc, char **argv)
     }
 
     if (runner.options.verbose) {
-        qDebug() << "Fullscreen ......:" << (runner.options.fullscreen ? "yes" : "no");
-        qDebug() << "Fps Interval ....:" << runner.options.fpsInterval;
-        qDebug() << "Fps Tolerance ...:" << runner.options.fpsTolerance;
-        qDebug() << "Template ........:" << runner.options.bmTemplate;
+        qDebug() << "Frame Rate .........:" << (runner.options.fpsOverride > 0 ? runner.options.fpsOverride : QGuiApplication::primaryScreen()->refreshRate());
+        qDebug() << "Fullscreen .........:" << (runner.options.fullscreen ? "yes" : "no");
+        qDebug() << "Fullscreen .........:" << (runner.options.fullscreen ? "yes" : "no");
+        qDebug() << "Fps Interval .......:" << runner.options.fpsInterval;
+        qDebug() << "Fps Tolerance ......:" << runner.options.fpsTolerance;
+        qDebug() << "Template ...........:" << runner.options.bmTemplate;
         qDebug() << "Benchmarks:";
         foreach (const Benchmark &b, runner.benchmarks) {
             qDebug() << " -" << b.fileName;
