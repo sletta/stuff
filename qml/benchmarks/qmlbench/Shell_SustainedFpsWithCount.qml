@@ -88,12 +88,10 @@ Item {
                 swapCountDown = 5;
             }
             function frameSwapped() {
-                print("   - swapped..." + item.count);
                 if (!running && --swapCountDown < 0) {
                     tick = 0;
                     lastFrameTime = new Date();
                     start();
-                    print("   -> started..");
                 }
             }
 
