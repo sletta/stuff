@@ -95,6 +95,7 @@ struct Options
     Options()
         : fullscreen(false)
         , verbose(false)
+        , repeat(1)
         , fpsTolerance(0.05)
         , fpsInterval(1000)
         , fpsOverride(0)
@@ -104,6 +105,7 @@ struct Options
     QString bmTemplate;
     bool fullscreen;
     bool verbose;
+    int repeat;
     qreal fpsTolerance;
     qreal fpsInterval;
     qreal fpsOverride;
@@ -117,7 +119,6 @@ struct Benchmark
     Benchmark(const QString &file)
         : fileName(file)
         , completed(false)
-        , operationsPerFrame(0)
     {
     }
 
@@ -125,7 +126,7 @@ struct Benchmark
     QSize windowSize;
 
     bool completed;
-    qreal operationsPerFrame;
+    QList<qreal> operationsPerFrame;
 };
 
 
@@ -197,6 +198,12 @@ int main(int argc, char **argv)
                                      QStringLiteral("Verbose mode"));
     parser.addOption(verboseOption);
 
+    QCommandLineOption repeatOption(QStringLiteral("repeat"),
+                                         QStringLiteral("Sets the number of times to repeat the benchmark, to get more stable results"),
+                                         QStringLiteral("iterations"),
+                                         QStringLiteral("1"));
+    parser.addOption(repeatOption);
+
     QCommandLineOption fpsIntervalOption(QStringLiteral("fps-interval"),
                                          QStringLiteral("Set the interval used to measure framerate in ms. Higher values lead to more stable test results"),
                                          QStringLiteral("interval"),
@@ -246,6 +253,7 @@ int main(int argc, char **argv)
     BenchmarkRunner runner;
     runner.options.verbose = parser.isSet(verboseOption);
     runner.options.fullscreen = parser.isSet(fullscreenOption);
+    runner.options.repeat = qMax<int>(1, parser.value(repeatOption).toInt());
     runner.options.fpsInterval = qMax<qreal>(500, parser.value(fpsIntervalOption).toFloat());
     runner.options.fpsTolerance = qMax<qreal>(1, parser.value(fpsToleranceOption).toFloat());
     runner.options.bmTemplate = parser.value(templateOption);
@@ -316,9 +324,18 @@ void BenchmarkRunner::start()
     }
 
     Benchmark &bm = benchmarks[m_currentBenchmark];
-    qDebug() << "running:" << bm.fileName;
+
+    if (bm.operationsPerFrame.size() == 0)
+        qDebug() << "running:" << bm.fileName;
 
     m_view = new QQuickView();
+    // Make sure proper fullscreen is possible on OSX
+    m_view->setFlags(Qt::Window
+                     | Qt::WindowSystemMenuHint
+                     | Qt::WindowTitleHint
+                     | Qt::WindowMinMaxButtonsHint
+                     | Qt::WindowCloseButtonHint
+                     | Qt::WindowFullscreenButtonHint);
     m_view->setResizeMode(QQuickView::SizeRootObjectToView);
     m_view->rootContext()->setContextProperty("benchmark", this);
 
@@ -347,6 +364,7 @@ void BenchmarkRunner::start()
 
 void BenchmarkRunner::maybeStartNext()
 {
+
     ++m_currentBenchmark;
     if (m_currentBenchmark < benchmarks.size()) {
         QMetaObject::invokeMethod(this, "start", Qt::QueuedConnection);
@@ -371,8 +389,13 @@ void BenchmarkRunner::recordOperationsPerFrame(qreal ops)
 {
     Benchmark &bm = benchmarks[m_currentBenchmark];
     bm.completed = true;
-    bm.operationsPerFrame = ops;
+    bm.operationsPerFrame << ops;
     qDebug() << "    " << ops << "ops/frame";
+    if (bm.operationsPerFrame.size() == options.repeat && options.repeat > 1) {
+        qreal avg = 0;
+        foreach (qreal r, bm.operationsPerFrame) avg += r;
+        qDebug() << "    " << (avg / options.repeat) << "ops/frame average";
+    }
     complete();
 }
 
@@ -382,8 +405,10 @@ void BenchmarkRunner::complete()
     m_view = 0;
     m_component->deleteLater();
     m_component = 0;
-
-    QMetaObject::invokeMethod(this, "maybeStartNext", Qt::QueuedConnection);
+    if (benchmarks[m_currentBenchmark].operationsPerFrame.size() < options.repeat)
+        QMetaObject::invokeMethod(this, "start", Qt::QueuedConnection);
+    else
+        QMetaObject::invokeMethod(this, "maybeStartNext", Qt::QueuedConnection);
 }
 
 #include "main.moc"

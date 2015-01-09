@@ -142,7 +142,7 @@ Item {
                 description.text = loader.item.description
             }
         } catch (e) {
-            description.text = "Benchmark is missing description..."
+            description.text = ("" + loader.source).substr(30);
         }
     }
 

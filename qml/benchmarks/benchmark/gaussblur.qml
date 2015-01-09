@@ -4,6 +4,7 @@ import QtGraphicalEffects 1.0
 Item {
     id: root;
     property int count: 8
+    property int maxCount: 32;
 
     width: 600
     height: 600
@@ -25,9 +26,9 @@ Item {
 
         layer.enabled: true
         layer.effect: GaussianBlur {
-            samples: root.sampleCount
-            radius: root.sampleCount
-            deviation: Math.sqrt(root.sampleCount)
+            samples: root.count
+            radius: root.count
+            deviation: Math.sqrt(root.count)
         }
     }
 }

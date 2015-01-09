@@ -115,7 +115,12 @@ Item {
                 var errorRatio = Math.abs(1 - root.fps / root.targetFrameRate);
                 var ok = errorRatio < benchmark.fpsTolerance
 
-                if (knownBad > 0 && Math.abs(knownGood - knownBad) < 2) {
+                var max = Number.MAX_VALUE;
+                if (item.hasOwnProperty("maxCount"))
+                    max = item.maxCount;
+
+                if ((knownBad > 0 && Math.abs(knownGood - knownBad) < 2)
+                        || item.count >= max) {
                     fpsTimer.stop();
                     benchmark.recordOperationsPerFrame(ok ? item.count : knownGood);
                     return;
@@ -129,12 +134,13 @@ Item {
                           "Fps: " + root.fps);
                 }
 
+
                 if (ok) {
                     knownGood = item.count;
                     var incr = Math.max(1, item.count * 2);
                     if (knownBad > 0)
                         incr = (knownBad - knownGood) / 2.0;
-                    item.count += incr;
+                    item.count = Math.min(max, item.count + incr);
                     startOver();
                 } else {
                     knownBad = item.count;
