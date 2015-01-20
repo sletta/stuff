@@ -262,9 +262,9 @@ int main(int argc, char **argv)
         runner.options.fpsOverride = parser.value(fpsOverrideOption).toFloat();
 
     if (runner.options.bmTemplate == QStringLiteral("sustained-fps"))
-        runner.options.bmTemplate = QStringLiteral("Shell_SustainedFpsWithCount.qml");
+        runner.options.bmTemplate = QStringLiteral("qrc:/Shell_SustainedFpsWithCount.qml");
     else
-        runner.options.bmTemplate = QStringLiteral("Shell_SustainedFpsWithCount.qml");
+        runner.options.bmTemplate = QStringLiteral("qrc:/Shell_SustainedFpsWithCount.qml");
 
     foreach (QString input, parser.positionalArguments()) {
         QFileInfo info(input);
@@ -321,12 +321,6 @@ bool BenchmarkRunner::execute()
 
 void BenchmarkRunner::start()
 {
-    if (!QFileInfo(options.bmTemplate).exists()) {
-        qDebug() << "benchmark template missing:" << options.bmTemplate;
-        abortAll();
-        return;
-    }
-
     Benchmark &bm = benchmarks[m_currentBenchmark];
 
     if (bm.operationsPerFrame.size() == 0)
@@ -354,7 +348,7 @@ void BenchmarkRunner::start()
         return;
     }
 
-    m_view->setSource(QUrl::fromLocalFile(options.bmTemplate));
+    m_view->setSource(QUrl(options.bmTemplate));
     if (!m_view->rootObject()) {
         qDebug() << "no root object..";
         abortAll();
