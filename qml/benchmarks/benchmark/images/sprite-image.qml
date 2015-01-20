@@ -21,9 +21,9 @@ Item {
                 width: root.cellSize
                 height: root.cellSize
 
-                Image { id: imgWide; anchors.fill: parent; visible: false; source: "butterfly-wide.png"; sourceSize: root.srcSize }
-                Image { id: imgHalf; anchors.fill: parent; visible: false; source: "butterfly-half.png"; sourceSize: root.srcSize }
-                Image { id: imgSmall; anchors.fill: parent; visible: false; source: "butterfly-collapsed.png"; sourceSize: root.srcSize }
+                Image { id: imgWide; anchors.fill: parent; visible: false; source: "../butterfly-wide.png"; sourceSize: root.srcSize }
+                Image { id: imgHalf; anchors.fill: parent; visible: false; source: "../butterfly-half.png"; sourceSize: root.srcSize }
+                Image { id: imgSmall; anchors.fill: parent; visible: false; source: "../butterfly-collapsed.png"; sourceSize: root.srcSize }
 
                 SequentialAnimation {
                     running: true

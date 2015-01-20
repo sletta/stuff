@@ -14,7 +14,7 @@ Item {
         Repeater {
             model: root.count
             Image {
-                source: "butterfly-wide.png"
+                source: "../butterfly-wide.png"
                 sourceSize: Qt.size(root.size, root.size);
                 SequentialAnimation on rotation {
                     PauseAnimation { duration: 200 + Math.random() * 200 }

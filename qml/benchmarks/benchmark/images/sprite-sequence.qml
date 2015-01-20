@@ -19,21 +19,21 @@ Item {
                 height: root.cellSize
                 Sprite {
                     name: "one"
-                    source: "butterfly-wide.png"
+                    source: "../butterfly-wide.png"
                     frameCount: 1
                     frameDuration: 300 + Math.random() * 300
                     to: { "two" : 1 }
                 }
                 Sprite {
                     name: "two"
-                    source: "butterfly-half.png"
+                    source: "../butterfly-half.png"
                     frameCount: 1
                     frameDuration: 300
                     to: { "three" : 1 }
                 }
                 Sprite {
                     name: "three"
-                    source: "butterfly-collapsed.png"
+                    source: "../butterfly-collapsed.png"
                     frameCount: 1
                     frameDuration: 300
                     to: { "one" : 1 }
