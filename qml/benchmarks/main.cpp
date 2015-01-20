@@ -147,6 +147,7 @@ class BenchmarkRunner : public QObject
 
 public:
     BenchmarkRunner();
+    ~BenchmarkRunner();
 
     bool execute();
 
@@ -295,7 +296,6 @@ int main(int argc, char **argv)
     if (!runner.execute())
         return 0;
 
-    app.setQuitOnLastWindowClosed(false);
     return app.exec();
 }
 
@@ -303,7 +303,11 @@ BenchmarkRunner::BenchmarkRunner()
     : m_currentBenchmark(0)
     , m_view(0)
 {
+}
 
+BenchmarkRunner::~BenchmarkRunner()
+{
+    delete m_view;
 }
 
 bool BenchmarkRunner::execute()
@@ -328,16 +332,20 @@ void BenchmarkRunner::start()
     if (bm.operationsPerFrame.size() == 0)
         qDebug() << "running:" << bm.fileName;
 
-    m_view = new QQuickView();
-    // Make sure proper fullscreen is possible on OSX
-    m_view->setFlags(Qt::Window
-                     | Qt::WindowSystemMenuHint
-                     | Qt::WindowTitleHint
-                     | Qt::WindowMinMaxButtonsHint
-                     | Qt::WindowCloseButtonHint
-                     | Qt::WindowFullscreenButtonHint);
-    m_view->setResizeMode(QQuickView::SizeRootObjectToView);
-    m_view->rootContext()->setContextProperty("benchmark", this);
+    bool viewWasJustAdded = false;
+    if (!m_view) {
+        viewWasJustAdded = true;
+        m_view = new QQuickView();
+        // Make sure proper fullscreen is possible on OSX
+        m_view->setFlags(Qt::Window
+                         | Qt::WindowSystemMenuHint
+                         | Qt::WindowTitleHint
+                         | Qt::WindowMinMaxButtonsHint
+                         | Qt::WindowCloseButtonHint
+                         | Qt::WindowFullscreenButtonHint);
+        m_view->setResizeMode(QQuickView::SizeRootObjectToView);
+        m_view->rootContext()->setContextProperty("benchmark", this);
+    }
 
     m_component = new QQmlComponent(m_view->engine(), bm.fileName);
     if (m_component->status() != QQmlComponent::Ready) {
@@ -353,11 +361,13 @@ void BenchmarkRunner::start()
         return;
     }
 
-    if (options.fullscreen)
-        m_view->showFullScreen();
-    else
-        m_view->show();
-    m_view->raise();
+    if (viewWasJustAdded) {
+        if (options.fullscreen)
+            m_view->showFullScreen();
+        else
+            m_view->show();
+        m_view->raise();
+    }
 
     bm.windowSize = m_view->size();
 }
@@ -401,8 +411,6 @@ void BenchmarkRunner::recordOperationsPerFrame(qreal ops)
 
 void BenchmarkRunner::complete()
 {
-    m_view->deleteLater();
-    m_view = 0;
     m_component->deleteLater();
     m_component = 0;
     if (benchmarks[m_currentBenchmark].operationsPerFrame.size() < options.repeat)
