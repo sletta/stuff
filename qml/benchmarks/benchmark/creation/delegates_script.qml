@@ -2,12 +2,6 @@ import QtQuick 2.0
 
 Item {
     id: root;
-    function complicate() { count += increment; }
-    function simplify() { count = Math.max(1, count - increment); }
-    property int increment: Math.log(count * count);
-
-    property string description: "Delegates per frame: " + count + ", Rect in Rect (2 items)"
-
     property int count: 50;
 
     property real t;
@@ -27,10 +21,9 @@ Item {
             width: 30
             height: 15
             color: "steelblue"
-            Rectangle {
-                anchors.margins: 5
-                anchors.fill: parent
-                color: "lime"
+            Component.onCompleted: {
+                var t = Math.random();
+                color = Qt.hsla(t, 1, 0.5);
             }
         }
     }

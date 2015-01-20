@@ -1,13 +1,12 @@
 import QtQuick 2.2
 
-Benchmark {
+Item {
     id: root;
 
-    property string description: count + " " + cellSize + "x" + cellSize + " sprites\nImages with animation";
     property real cellSize: Math.floor(Math.sqrt(width * height / count))
     property size srcSize: Qt.size(cellSize, cellSize);
 
-    count: 200
+    property int count: 200
 
     Grid {
         width: root.width
@@ -22,9 +21,9 @@ Benchmark {
                 width: root.cellSize
                 height: root.cellSize
 
-                Image { id: imgWide; anchors.fill: parent; visible: false; source: "butterfly-wide.png"; sourceSize: root.srcSize }
-                Image { id: imgHalf; anchors.fill: parent; visible: false; source: "butterfly-half.png"; sourceSize: root.srcSize }
-                Image { id: imgSmall; anchors.fill: parent; visible: false; source: "butterfly-collapsed.png"; sourceSize: root.srcSize }
+                Image { id: imgWide; anchors.fill: parent; visible: false; source: "../butterfly-wide.png"; sourceSize: root.srcSize }
+                Image { id: imgHalf; anchors.fill: parent; visible: false; source: "../butterfly-half.png"; sourceSize: root.srcSize }
+                Image { id: imgSmall; anchors.fill: parent; visible: false; source: "../butterfly-collapsed.png"; sourceSize: root.srcSize }
 
                 SequentialAnimation {
                     running: true

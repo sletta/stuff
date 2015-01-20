@@ -2,11 +2,6 @@ import QtQuick 2.0
 
 Item {
     id: root;
-    function complicate() { count += increment; }
-    function simplify() { count = Math.max(1, count - increment); }
-    property int increment: Math.log(count * count);
-
-    property string description: "Delegates per frame: " + count + " Images"
     property int count: 50;
 
     property real t;
@@ -18,21 +13,14 @@ Item {
 
     Component.onCompleted: repeater.model = root.count
 
-    property var names: [
-        "butterfly-wide.png",
-        "butterfly-half.png",
-        "butterfly-collapsed.png"
-    ];
-
     Repeater {
         id: repeater
-        Image {
+        Text {
             x: Math.random() * (root.width - width)
             y: Math.random() * (root.height - height)
-            source: root.names[index % 3];
-            width: 20
-            height: 20
-
+            text: "Qt Quick!"
+            font.pixelSize: 10
+//            renderType: Text.NativeRendering
         }
     }
 }

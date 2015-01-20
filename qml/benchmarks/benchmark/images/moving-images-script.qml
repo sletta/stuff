@@ -1,12 +1,12 @@
 import QtQuick 2.2
 
-Benchmark {
+Item {
     id: root;
 
     property int size: Math.sqrt(width * height / count);
     property string description: count + " " + size + "x" + size + " Image instances\nAnimation with JavaScript";
 
-    count: 500
+    property int count: 500
 
     Grid {
         width: root.width
@@ -16,7 +16,7 @@ Benchmark {
         Repeater {
             model: root.count
             Image {
-                source: "butterfly-wide.png"
+                source: "../butterfly-wide.png"
                 sourceSize: Qt.size(root.size, root.size);
 
                 property real t;
