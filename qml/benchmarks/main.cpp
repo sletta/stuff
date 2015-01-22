@@ -96,9 +96,11 @@ struct Options
         : fullscreen(false)
         , verbose(false)
         , repeat(1)
+        , delayedStart(0)
         , fpsTolerance(0.05)
         , fpsInterval(1000)
         , fpsOverride(0)
+        , windowSize(800, 600)
     {
     }
 
@@ -106,10 +108,12 @@ struct Options
     bool fullscreen;
     bool verbose;
     int repeat;
+    int delayedStart;
     qreal fpsTolerance;
     qreal fpsInterval;
     qreal fpsOverride;
     qreal targetFps;
+    QSize windowSize;
 };
 
 
@@ -188,7 +192,7 @@ int main(int argc, char **argv)
 {
     qmlRegisterType<QQuickView>();
 
-	QGuiApplication app(argc, argv);	
+	QGuiApplication app(argc, argv);
 
 	QCommandLineParser parser;
 
@@ -204,6 +208,24 @@ int main(int argc, char **argv)
                                          QStringLiteral("iterations"),
                                          QStringLiteral("1"));
     parser.addOption(repeatOption);
+
+    QCommandLineOption delayOption(QStringLiteral("delay"),
+                                   QStringLiteral("Initial delay before benchmarks start"),
+                                   QStringLiteral("milliseconds"),
+                                   QStringLiteral("0"));
+    parser.addOption(delayOption);
+
+    QCommandLineOption widthOption(QStringLiteral("width"),
+                                   QStringLiteral("Window Width"),
+                                   QStringLiteral("width"),
+                                   QStringLiteral("800"));
+    parser.addOption(widthOption);
+
+    QCommandLineOption heightOption(QStringLiteral("height"),
+                                   QStringLiteral("Window height"),
+                                   QStringLiteral("height"),
+                                   QStringLiteral("600"));
+    parser.addOption(heightOption);
 
     QCommandLineOption fpsIntervalOption(QStringLiteral("fps-interval"),
                                          QStringLiteral("Set the interval used to measure framerate in ms. Higher values lead to more stable test results"),
@@ -258,6 +280,14 @@ int main(int argc, char **argv)
     runner.options.fpsInterval = qMax<qreal>(500, parser.value(fpsIntervalOption).toFloat());
     runner.options.fpsTolerance = qMax<qreal>(1, parser.value(fpsToleranceOption).toFloat());
     runner.options.bmTemplate = parser.value(templateOption);
+    runner.options.delayedStart = parser.value(delayOption).toInt();
+
+    QSize size(parser.value(widthOption).toInt(),
+               parser.value(heightOption).toInt());
+
+    if (size.isValid())
+        runner.options.windowSize = size;
+
     if (parser.isSet(fpsOverrideOption))
         runner.options.fpsOverride = parser.value(fpsOverrideOption).toFloat();
 
@@ -315,7 +345,27 @@ bool BenchmarkRunner::execute()
     m_currentBenchmark = 0;
     if (benchmarks.size() == 0)
         return false;
-    QMetaObject::invokeMethod(this, "start", Qt::QueuedConnection);
+    QTimer::singleShot(options.delayedStart, this, SLOT(start()));
+
+    m_view = new QQuickView();
+    // Make sure proper fullscreen is possible on OSX
+    m_view->setFlags(Qt::Window
+                     | Qt::WindowSystemMenuHint
+                     | Qt::WindowTitleHint
+                     | Qt::WindowMinMaxButtonsHint
+                     | Qt::WindowCloseButtonHint
+                     | Qt::WindowFullscreenButtonHint);
+    m_view->setResizeMode(QQuickView::SizeRootObjectToView);
+    m_view->rootContext()->setContextProperty("benchmark", this);
+
+    m_view->resize(options.windowSize);
+
+    if (options.fullscreen)
+        m_view->showFullScreen();
+    else
+        m_view->show();
+    m_view->raise();
+
     return true;
 }
 
@@ -325,21 +375,6 @@ void BenchmarkRunner::start()
 
     if (bm.operationsPerFrame.size() == 0)
         qDebug() << "running:" << bm.fileName;
-
-    bool viewWasJustAdded = false;
-    if (!m_view) {
-        viewWasJustAdded = true;
-        m_view = new QQuickView();
-        // Make sure proper fullscreen is possible on OSX
-        m_view->setFlags(Qt::Window
-                         | Qt::WindowSystemMenuHint
-                         | Qt::WindowTitleHint
-                         | Qt::WindowMinMaxButtonsHint
-                         | Qt::WindowCloseButtonHint
-                         | Qt::WindowFullscreenButtonHint);
-        m_view->setResizeMode(QQuickView::SizeRootObjectToView);
-        m_view->rootContext()->setContextProperty("benchmark", this);
-    }
 
     m_component = new QQmlComponent(m_view->engine(), bm.fileName);
     if (m_component->status() != QQmlComponent::Ready) {
@@ -353,14 +388,6 @@ void BenchmarkRunner::start()
         qDebug() << "no root object..";
         abortAll();
         return;
-    }
-
-    if (viewWasJustAdded) {
-        if (options.fullscreen)
-            m_view->showFullScreen();
-        else
-            m_view->show();
-        m_view->raise();
     }
 
     bm.windowSize = m_view->size();
