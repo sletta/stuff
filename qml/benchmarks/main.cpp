@@ -2,6 +2,8 @@
 #include <QtGui>
 #include <QtQuick>
 
+#include "qcommandlineparser.h"
+
 class FpsDecider : public QWindow
 {
 public:
