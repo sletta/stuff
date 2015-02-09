@@ -194,7 +194,8 @@ int main(int argc, char **argv)
 {
     qmlRegisterType<QQuickView>();
 
-	QGuiApplication app(argc, argv);
+    QGuiApplication app(argc, argv);
+    qDebug() << "Running against " << QT_VERSION_STR;
 
 	QCommandLineParser parser;
 
