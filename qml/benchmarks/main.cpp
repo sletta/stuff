@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <QtCore>
 #include <QtGui>
 #include <QtQuick>
@@ -47,14 +49,14 @@ public:
 
         if (frameCount == 0) {
 #if QT_VERSION >= 0x050300
-            qDebug() << "GL_VENDOR:  " << (const char *) func->glGetString(GL_VENDOR);
-            qDebug() << "GL_RENDERER:" << (const char *) func->glGetString(GL_RENDERER);
-            qDebug() << "GL_VERSION: " << (const char *) func->glGetString(GL_VERSION);
+            std::cout << "GL_VENDOR:   " << (const char *) func->glGetString(GL_VENDOR) << std::endl;
+            std::cout << "GL_RENDERER: " << (const char *) func->glGetString(GL_RENDERER) << std::endl;
+            std::cout << "GL_VERSION:  " << (const char *) func->glGetString(GL_VERSION) << std::endl;
 #else
             Q_UNUSED(func);
-            qDebug() << "GL_VENDOR:  " << (const char *) glGetString(GL_VENDOR);
-            qDebug() << "GL_RENDERER:" << (const char *) glGetString(GL_RENDERER);
-            qDebug() << "GL_VERSION: " << (const char *) glGetString(GL_VERSION);
+            std::cout << "GL_VENDOR:   " << (const char *) glGetString(GL_VENDOR) << std::endl;
+            std::cout << "GL_RENDERER: " << (const char *) glGetString(GL_RENDERER) << std::endl;
+            std::cout << "GL_VERSION:  " << (const char *) glGetString(GL_VERSION) << std::endl;
 #endif
         }
 
@@ -73,10 +75,10 @@ public:
 
         int time = timer.elapsed();
         if (time > 5000) {
-            qDebug() << endl
-                     << "FPS:" << frameCount * 1000 / float(time)
-                     << " -- " << frameCount << "frames in" << time << "ms;"
-                     << time / float(frameCount) << "ms/frame" << endl;
+            std::cout << std::endl
+                     << "FPS: " << frameCount * 1000 / float(time)
+                     << " -- " << frameCount << " frames in " << time << "ms; "
+                     << time / float(frameCount) << " ms/frame " << std::endl;
             exit(0);
 
         } else {
@@ -195,7 +197,7 @@ int main(int argc, char **argv)
     qmlRegisterType<QQuickView>();
 
     QGuiApplication app(argc, argv);
-    qDebug() << "Running against " << QT_VERSION_STR;
+    std::cout << "Running against " << QT_VERSION_STR << std::endl;
 
 	QCommandLineParser parser;
 
@@ -302,7 +304,7 @@ int main(int argc, char **argv)
     foreach (QString input, parser.positionalArguments()) {
         QFileInfo info(input);
         if (!info.exists()) {
-            qDebug() << "input doesn't exist:" << input;
+            qWarning() << "input doesn't exist:" << input;
         } else if (info.suffix() == QStringLiteral("qml")) {
             runner.benchmarks << Benchmark(info.absoluteFilePath());
         } else if (info.isDir()) {
@@ -314,15 +316,15 @@ int main(int argc, char **argv)
     }
 
     if (runner.options.verbose) {
-        qDebug() << "Frame Rate .........:" << (runner.options.fpsOverride > 0 ? runner.options.fpsOverride : QGuiApplication::primaryScreen()->refreshRate());
-        qDebug() << "Fullscreen .........:" << (runner.options.fullscreen ? "yes" : "no");
-        qDebug() << "Fullscreen .........:" << (runner.options.fullscreen ? "yes" : "no");
-        qDebug() << "Fps Interval .......:" << runner.options.fpsInterval;
-        qDebug() << "Fps Tolerance ......:" << runner.options.fpsTolerance;
-        qDebug() << "Template ...........:" << runner.options.bmTemplate;
-        qDebug() << "Benchmarks:";
+        std::cout << "Frame Rate .........: " << (runner.options.fpsOverride > 0 ? runner.options.fpsOverride : QGuiApplication::primaryScreen()->refreshRate()) << std::endl;
+        std::cout << "Fullscreen .........: " << (runner.options.fullscreen ? "yes" : "no") << std::endl;
+        std::cout << "Fullscreen .........: " << (runner.options.fullscreen ? "yes" : "no") << std::endl;
+        std::cout << "Fps Interval .......: " << runner.options.fpsInterval << std::endl;
+        std::cout << "Fps Tolerance ......: " << runner.options.fpsTolerance << std::endl;
+        std::cout << "Template ...........: " << runner.options.bmTemplate.toStdString() << std::endl;
+        std::cout << "Benchmarks:" << std::endl;
         foreach (const Benchmark &b, runner.benchmarks) {
-            qDebug() << " -" << b.fileName;
+            std::cout << " - " << b.fileName.toStdString() << std::endl;
         }
     }
 
@@ -377,18 +379,18 @@ void BenchmarkRunner::start()
     Benchmark &bm = benchmarks[m_currentBenchmark];
 
     if (bm.operationsPerFrame.size() == 0)
-        qDebug() << "running:" << bm.fileName;
+        std::cout << "running: " << bm.fileName.toStdString() << std::endl;
 
     m_component = new QQmlComponent(m_view->engine(), bm.fileName);
     if (m_component->status() != QQmlComponent::Ready) {
-        qDebug() << "component is not ready" << bm.fileName;
+        qWarning() << "component is not ready" << bm.fileName;
         abort();
         return;
     }
 
     m_view->setSource(QUrl(options.bmTemplate));
     if (!m_view->rootObject()) {
-        qDebug() << "no root object..";
+        qWarning() << "no root object..";
         abortAll();
         return;
     }
@@ -403,7 +405,7 @@ void BenchmarkRunner::maybeStartNext()
     if (m_currentBenchmark < benchmarks.size()) {
         QMetaObject::invokeMethod(this, "start", Qt::QueuedConnection);
     } else {
-        qDebug() << "All done...";
+        std::cout << "All done..." << std::endl;
         qApp->quit();
     }
 }
@@ -415,7 +417,7 @@ void BenchmarkRunner::abort()
 
 void BenchmarkRunner::abortAll()
 {
-    qDebug() << "Aborting all benchmarks...";
+    std::cout << "Aborting all benchmarks..." << std::endl;
     qApp->quit();
 }
 
@@ -424,11 +426,11 @@ void BenchmarkRunner::recordOperationsPerFrame(qreal ops)
     Benchmark &bm = benchmarks[m_currentBenchmark];
     bm.completed = true;
     bm.operationsPerFrame << ops;
-    qDebug() << "    " << ops << "ops/frame";
+    std::cout << "    " << ops << " ops/frame" << std::endl;
     if (bm.operationsPerFrame.size() == options.repeat && options.repeat > 1) {
         qreal avg = 0;
         foreach (qreal r, bm.operationsPerFrame) avg += r;
-        qDebug() << "    " << (avg / options.repeat) << "ops/frame average";
+        std::cout << "    " << (avg / options.repeat) << " ops/frame average" << std::endl;
     }
     complete();
 }
