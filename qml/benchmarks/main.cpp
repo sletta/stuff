@@ -211,13 +211,13 @@ int main(int argc, char **argv)
     QCommandLineOption repeatOption(QStringLiteral("repeat"),
                                          QStringLiteral("Sets the number of times to repeat the benchmark, to get more stable results"),
                                          QStringLiteral("iterations"),
-                                         QStringLiteral("1"));
+                                         QStringLiteral("5"));
     parser.addOption(repeatOption);
 
     QCommandLineOption delayOption(QStringLiteral("delay"),
                                    QStringLiteral("Initial delay before benchmarks start"),
                                    QStringLiteral("milliseconds"),
-                                   QStringLiteral("0"));
+                                   QStringLiteral("2000"));
     parser.addOption(delayOption);
 
     QCommandLineOption widthOption(QStringLiteral("width"),
@@ -241,7 +241,7 @@ int main(int argc, char **argv)
     QCommandLineOption fpsToleranceOption(QStringLiteral("fps-tolerance"),
                                           QStringLiteral("The amount of deviance tolerated from the target frame rate in %. Lower value leads to more accurate results"),
                                           QStringLiteral("tolerance"),
-                                          QStringLiteral("5"));
+                                          QStringLiteral("2"));
     parser.addOption(fpsToleranceOption);
 
     QCommandLineOption fpsOverrideOption(QStringLiteral("fps-override"),

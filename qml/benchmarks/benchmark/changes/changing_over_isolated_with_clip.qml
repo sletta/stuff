@@ -2,7 +2,7 @@ import QtQuick 2.0
 
 Item {
     id: root;
-    property int count: 1000;
+    property int count: 100;
     property real t;
     NumberAnimation on t { from: 0; to: 1; duration: 2347; loops: Animation.Infinite }
 
@@ -19,6 +19,7 @@ Item {
                 height: 20
                 x: Math.random() * root.width
                 y: Math.random() * root.height
+                clip: true
 
                 Text {
                     color: "white"

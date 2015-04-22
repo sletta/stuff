@@ -17,6 +17,8 @@ Item {
                 color: Qt.hsla(Math.random(), 0.9, 0.4)
                 width: 20
                 height: 20
+                clip: true
+                rotation: 10
                 x: Math.random() * root.width
                 y: Math.random() * root.height
 
