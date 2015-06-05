@@ -2,5 +2,6 @@
 <RCC version="1.0">
   <qresource>
     <file>Shell_SustainedFpsWithCount.qml</file>
+    <file>Shell_SustainedFpsWithStaticCount.qml</file>
   </qresource>
 </RCC>

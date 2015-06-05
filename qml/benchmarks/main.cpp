@@ -101,6 +101,7 @@ struct Options
         , verbose(false)
         , repeat(1)
         , delayedStart(0)
+        , count(-1)
         , fpsTolerance(0.05)
         , fpsInterval(1000)
         , fpsOverride(0)
@@ -113,6 +114,7 @@ struct Options
     bool verbose;
     int repeat;
     int delayedStart;
+    int count;
     qreal fpsTolerance;
     qreal fpsInterval;
     qreal fpsOverride;
@@ -152,6 +154,7 @@ class BenchmarkRunner : public QObject
     Q_PROPERTY(qreal fpsTolerance READ fpsTolerance CONSTANT)
     Q_PROPERTY(qreal fpsInterval READ fpsInterval CONSTANT)
     Q_PROPERTY(bool verbose READ verbose CONSTANT)
+    Q_PROPERTY(int count READ count CONSTANT)
 
 public:
     BenchmarkRunner();
@@ -171,6 +174,8 @@ public:
     qreal fpsInterval() const { return options.fpsInterval; }
 
     bool verbose() const { return options.verbose; }
+
+    int count() const { return options.count; }
 
 public slots:
     void recordOperationsPerFrame(qreal count);
@@ -253,9 +258,15 @@ int main(int argc, char **argv)
     parser.addOption(fullscreenOption);
 
     QCommandLineOption templateOption(QStringList() << QStringLiteral("s") << QStringLiteral("shell"),
-                                      QStringLiteral("What kind of benchmark shell to run. Available options are: 'sustained-fps'"),
+                                      QStringLiteral("What kind of benchmark shell to run: 'sustained-fps', 'static-count"),
                                       QStringLiteral("template"));
     parser.addOption(templateOption);
+
+    QCommandLineOption countOption(QStringLiteral("count"),
+                                   QStringLiteral("Static option for use with 'static-count' shell"),
+                                   QStringLiteral("count"),
+                                   QStringLiteral("-1"));
+    parser.addOption(countOption);
 
 
     parser.addPositionalArgument(QStringLiteral("input"),
@@ -286,6 +297,7 @@ int main(int argc, char **argv)
     runner.options.fpsTolerance = qMax<qreal>(1, parser.value(fpsToleranceOption).toFloat());
     runner.options.bmTemplate = parser.value(templateOption);
     runner.options.delayedStart = parser.value(delayOption).toInt();
+    runner.options.count = parser.value(countOption).toInt();
 
     QSize size(parser.value(widthOption).toInt(),
                parser.value(heightOption).toInt());
@@ -298,6 +310,8 @@ int main(int argc, char **argv)
 
     if (runner.options.bmTemplate == QStringLiteral("sustained-fps"))
         runner.options.bmTemplate = QStringLiteral("qrc:/Shell_SustainedFpsWithCount.qml");
+    else if (runner.options.bmTemplate == QStringLiteral("static-count"))
+        runner.options.bmTemplate = QStringLiteral("qrc:/Shell_SustainedFpsWithStaticCount.qml");
     else
         runner.options.bmTemplate = QStringLiteral("qrc:/Shell_SustainedFpsWithCount.qml");
 
