@@ -1,0 +1,62 @@
+<html>
+
+<style>
+#main {
+    background: steelblue;
+    text-align: center;
+    width: 200px;
+    height: 200;
+    left: 50%;
+    top: 50%;
+    margin-top: -100px;
+    margin-left: -100px;
+    position: fixed;
+    -webkit-perspective: 300px;
+    -webkit-filter: drop-shadow(20px 20px 10px gray)
+}
+
+#innerRed {
+    background: salmon;
+    border: 2px solid black;
+    text-align: center;
+    height: 100px;
+    width: 200px;
+    -webkit-transform: rotateY(45deg);
+
+    -webkit-animation-name: rotator; /* Chrome, Safari, Opera */
+    -webkit-animation-duration: 4s; /* Chrome, Safari, Opera */
+    -webkit-animation-iteration-count: infinite;
+}
+
+@-webkit-keyframes rotator {
+    0% {
+       -webkit-transform: rotateY(0deg) scale(2);
+    }
+    100% {
+       -webkit-transform: rotateY(360deg) scale(1.2);
+    }
+}
+
+
+body {
+    color: white;
+}
+
+</style>
+
+<body>
+
+<div id="main">
+
+    <p>
+    </p>
+
+    <div id="innerRed">
+        Text on red background, with rotation and stuff...
+    </div>
+
+
+</div>
+
+</body>
+</html>

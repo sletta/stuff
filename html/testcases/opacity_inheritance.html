@@ -1,0 +1,57 @@
+<html>
+
+<style>
+#main {
+    background: #0000ff;
+    text-align: center;
+    color: "white";
+    opacity: 0.5;
+    padding: 1%;
+}
+
+#innerBlue {
+    background: #0000ff;
+    height: 50px;
+}
+
+#innerRed {
+    background: #ff0000;
+    height: 50px;
+}
+
+#innerEmpty {
+    height: 50px;
+}
+
+body {
+    color: white;
+}
+
+</style>
+
+<body>
+
+<div id="main">
+
+    <p>
+    Root element, colored in blue, opacity = 0.5
+    </p>
+
+
+    <div id="innerRed">
+        Text on red background
+    </div>
+
+    <div id="innerBlue">
+        Text on blue background (notice how it doesn't accumulate...)
+    </div>
+
+    <div id="innerEmpty">
+        Text on no background
+    </div>
+
+
+</div>
+
+</body>
+</html>

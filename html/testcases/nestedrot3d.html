@@ -1,0 +1,83 @@
+<html>
+
+<style>
+
+#toplevel {
+    background: steelblue;
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    left: 50%;
+    top: 50%;
+    margin-left: -300px;
+    margin-top: -300px;
+}
+
+.plane3d {
+    color: black;
+    border: 1px solid black;
+    background: white;
+    margin: 10px;
+    -webkit-perspective: 1000px;
+}
+
+.inner {
+    background: salmon;
+    border: 1px solid red;
+    text-align: center;
+    height: 100px;
+    margin: 10px;
+    -webkit-animation-name: rotator;
+    -webkit-animation-duration: 10s;
+    -webkit-animation-iteration-count: infinite;
+    -moz-animation-name: rotator;
+    -moz-animation-duration: 10s;
+    -moz-animation-iteration-count: infinite;
+}
+
+@-webkit-keyframes rotator {
+    0% {
+       -webkit-transform: rotateY(0deg);
+    }
+    100% {
+       -webkit-transform: rotateY(360deg);
+    }
+}
+
+@-moz-keyframes rotator {
+    0% {
+       -moz-transform: rotateY(0deg);
+    }
+    100% {
+       -moz-transform: rotateY(360deg);
+    }
+}
+
+
+body {
+    color: white;
+}
+
+</style>
+
+<body>
+
+<div id="toplevel">
+
+    <div class="plane3d">
+        Here is the original root plane...
+        <div class="inner">
+            This is the first inner box
+            <div class="plane3d">
+                Here is the original root plane...
+                <div class="inner">
+                    This is the first inner box
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
