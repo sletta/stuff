@@ -7,9 +7,9 @@ Item {
     ShaderEffect {
         anchors.fill: parent
 
-        // layer.enabled: true
-        // layer.textureSize: Qt.size(200, 150);
-        // layer.smooth: true
+        layer.enabled: true
+        layer.textureSize: Qt.size(512, 256);
+        layer.smooth: true
 
         property real tt;
         NumberAnimation on tt { from: 0; to: 1; duration: 1000; loops: -1 }
@@ -17,11 +17,9 @@ Item {
 
         property var c;
         function updateC() {
-            var t = new Date().getTime() / 1000.0;
-            // var cx = (Math.sin(Math.cos(t / 10) * 10) + Math.cos(t * 2.0) / 4.0 + Math.sin(t * 3.0) / 6.0) * 0.8;
-            // var cy = (Math.cos(Math.sin(t / 10) * 10) + Math.sin(t * 2.0) / 4.0 + Math.cos(t * 3.0) / 6.0) * 0.8;
-            var cx = Math.sin(t) * 0.5;
-            var cy = Math.cos(t) * 0.5;
+            var t = new Date().getTime() / 2000.0;
+            var cx = Math.sin(t) * 0.2;
+            var cy = Math.cos(t) * 0.8;
             c = Qt.vector2d(cx, cy);
         }
 
@@ -50,8 +48,9 @@ Item {
                     z = vec2(x,y);
                 }
 
-                float v = sin(float(i) / float(ITERATIONS) * 3.14152 * 2.0);
-                gl_FragColor = vec4(vec3(0.5, 0.25, 1) * v, 1);
+                float v = i == ITERATIONS ? 0.0 : pow(float(i) / float(ITERATIONS), 0.5);
+
+                gl_FragColor = vec4(v * vec3(0.5, 0.3, 1), 1);
             }"
 
     }
