@@ -8,15 +8,29 @@
 using namespace std;
 
 // Globals, put here for convenience...
+
+// GLFW (windowing stuff)
 static GLFWwindow *window;
 static int windowWidth;
 static int windowHeight;
+
+// OpenGL
 static GLuint framebuffer;
 static GLuint framebufferTexture;
+static GLuint resultTexture;
 static GLuint fractalProgram;
 static GLuint fractalUniformC;
 static GLuint textureQuadBuffer;
 static GLuint blitProgram;
+
+// OpenCL
+static struct {
+    cl_device_id device;
+    cl_context context;
+    cl_command_queue commandQueue;
+    cl_mem sourceImage;
+    cl_mem targetImage;
+} cl;
 
 static void openclErrorCallback(const char *errinfo, const void *privateInfo, size_t cb, void *userData)
 {
@@ -28,43 +42,58 @@ void glfwErrorCallback(int error, const char *description)
     cout << "GLFW ERROR (" << error << "): " << description << endl;
 }
 
-static void setup_cl() {
+static void initialize_opencl() {
+
     // OpenCL setup
-    cl_device_id devices[4];
     cl_uint deviceCount = 0;
-    clGetDeviceIDs(0, CL_DEVICE_TYPE_GPU, sizeof(devices), devices, &deviceCount);
+    clGetDeviceIDs(0, CL_DEVICE_TYPE_GPU, sizeof(cl.device), &cl.device, &deviceCount);
     cout << "OpenCL GPU devices found: " << deviceCount << endl;
 
-    const int deviceId = 0;
-    DUMP_CL_DEVICE_STRING_OPTION(devices[deviceId], CL_DEVICE_NAME);
-    DUMP_CL_DEVICE_STRING_OPTION(devices[deviceId], CL_DEVICE_VENDOR);
-    DUMP_CL_DEVICE_STRING_OPTION(devices[deviceId], CL_DEVICE_VERSION);
-    DUMP_CL_DEVICE_STRING_OPTION(devices[deviceId], CL_DRIVER_VERSION);
-    DUMP_CL_DEVICE_BOOL_OPTION(devices[deviceId], CL_DEVICE_AVAILABLE);
-    DUMP_CL_DEVICE_BOOL_OPTION(devices[deviceId], CL_DEVICE_COMPILER_AVAILABLE);
-    DUMP_CL_DEVICE_INT_OPTION(devices[deviceId], CL_DEVICE_MAX_COMPUTE_UNITS);
-    DUMP_CL_DEVICE_INT_OPTION(devices[deviceId], CL_DEVICE_MAX_CLOCK_FREQUENCY);
-    DUMP_CL_DEVICE_ULONG_OPTION(devices[deviceId], CL_DEVICE_LOCAL_MEM_SIZE);
-    DUMP_CL_DEVICE_ULONG_OPTION(devices[deviceId], CL_DEVICE_GLOBAL_MEM_SIZE);
-    DUMP_CL_DEVICE_STRING_OPTION(devices[deviceId], CL_DEVICE_EXTENSIONS);
+    DUMP_CL_DEVICE_STRING_OPTION(cl.device, CL_DEVICE_NAME);
+    DUMP_CL_DEVICE_STRING_OPTION(cl.device, CL_DEVICE_VENDOR);
+    DUMP_CL_DEVICE_STRING_OPTION(cl.device, CL_DEVICE_VERSION);
+    DUMP_CL_DEVICE_STRING_OPTION(cl.device, CL_DRIVER_VERSION);
+    DUMP_CL_DEVICE_BOOL_OPTION(cl.device, CL_DEVICE_AVAILABLE);
+    DUMP_CL_DEVICE_BOOL_OPTION(cl.device, CL_DEVICE_COMPILER_AVAILABLE);
+    DUMP_CL_DEVICE_INT_OPTION(cl.device, CL_DEVICE_MAX_COMPUTE_UNITS);
+    DUMP_CL_DEVICE_INT_OPTION(cl.device, CL_DEVICE_MAX_CLOCK_FREQUENCY);
+    DUMP_CL_DEVICE_ULONG_OPTION(cl.device, CL_DEVICE_LOCAL_MEM_SIZE);
+    DUMP_CL_DEVICE_ULONG_OPTION(cl.device, CL_DEVICE_GLOBAL_MEM_SIZE);
+    DUMP_CL_DEVICE_STRING_OPTION(cl.device, CL_DEVICE_EXTENSIONS);
 
+    cout << "OpenCL Objects:" << endl;
+
+    // OpenCL context
     cl_int error;
     cl_context_properties clProperties[] = {
+        CL_GL_CONTEXT_KHR, (cl_context_properties) glXGetCurrentContext(),
+        CL_GLX_DISPLAY_KHR, (cl_context_properties) glXGetCurrentDisplay(),
         0
     };
-    cl_context clContext = clCreateContext(0, 1, &devices[deviceId], 0, 0, &error);
-    cout << "OpenCL Context: " << clContext << endl;
-    if (error != CL_SUCCESS) {
-        cout << "Epic failure when creating OpenCL Context....: " << error << " (0x" << hex << error << ")" << endl;
-        return;
-    }
+    cl.context = clCreateContext(0, 1, &cl.device, 0, 0, &error);
+    CL_CHECK_ERROR(error);
+    cout << " - context ............: " << cl.context << endl;
+
+    // OpenCL command queue...
+    cl.commandQueue = clCreateCommandQueue(cl.context, cl.device, CL_QUEUE_PROFILING_ENABLE, &error);
+    CL_CHECK_ERROR(error);
+    cout << " - command queue ......: " << cl.commandQueue << endl;
+
+    // clCreateFromGLTexture2D(0, 0, 0, 0, 0, 0);
+    cl.sourceImage = clCreateFromGLTexture2D(cl.context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, 0, &error);
+    CL_CHECK_ERROR(error);
+    cout << " - source image mem ...: " << cl.sourceImage << endl;
+
+    cl.targetImage = clCreateFromGLTexture2D(cl.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, resultTexture, &error);
+    CL_CHECK_ERROR(error);
+    cout << " - target image mem ...: " << cl.targetImage << endl;
 }
 
 static void initialize_opengl()
 {
      // OpenGL setup
     if (!glfwInit()) {
-        cerr << "glfwInit: failed!!" << endl;       
+        cerr << "glfwInit: failed!!" << endl;
         exit(1);
     }
     glfwSetErrorCallback(glfwErrorCallback);
@@ -84,13 +113,13 @@ static void initialize_opengl()
     GLenum err = glewInit();
     if (err != GLEW_OK) {
         cerr << "glewInit: failed!" << glewGetErrorString(err) << endl;
-        exit(1);       
+        exit(1);
     }
     cout << "GLEW initialized!" << endl << endl;
 
     cout << "OpenGL Objects:" << endl;
     framebuffer = gl_create_framebufferobject(windowWidth, windowHeight, &framebufferTexture);
-    cout << " - framebuffer .......: " << framebuffer 
+    cout << " - framebuffer .......: " << framebuffer
          << " (texture=" << framebufferTexture << ")" << endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -118,7 +147,7 @@ static void initialize_opengl()
                                       "\n     }"
                                       "\n     float v = i == ITERATIONS ? 0.0 : pow(float(i) / float(ITERATIONS), 0.5);"
                                       "\n     gl_FragColor = vec4(v * vec3(v, v*v, 1), 1);"
-                                      "\n }", 
+                                      "\n }",
                                       fractalAttributes);
     cout << " - fractal shader ....: " << fractalProgram << endl;
 
@@ -136,35 +165,40 @@ static void initialize_opengl()
                                     "\n varying vec2 vTC;"
                                     "\n void main() {"
                                     "\n     gl_FragColor = texture2D(T, vTC);"
-                                    "\n }", 
+                                    "\n }",
                                     blitAttributes);
     cout << " - blit shader .......: " << blitProgram << endl;
 
     glGenBuffers(1, &textureQuadBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, textureQuadBuffer);
-    float data[] = { -1, -1, 0, 0, 
+    float data[] = { -1, -1, 0, 0,
                       1, -1, 1, 0,
                      -1,  1, 0, 1,
                       1,  1, 1, 1 };
     glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
     cout << " - vertex buffer .....: " << textureQuadBuffer << endl;
 
+    resultTexture = gl_create_texture(windowWidth, windowHeight, 0);
+    cout << " - result texture ....: " << resultTexture << endl;
+
+    cout << endl;
+
+    glFinish();
 }
 
 static void renderToFramebuffer()
 {
+    // Prepare to draw frame, initial setup..
     glViewport(0, 0, windowWidth, windowHeight);
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
-
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
-
 
     // Render the fractal to the FBO
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     glUseProgram(fractalProgram);
-    static double t = 0; 
+    static double t = 0;
     t += 0.01;
     float cx = sin(t) * 0.5;
     float cy = cos(t);
@@ -175,11 +209,13 @@ static void renderToFramebuffer()
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // Optionally, render the FBO to the screen...
+    // Render the FBO to the screen..
+    // attribute arrays and buffer can be reused, so leave them be
     glBindTexture(GL_TEXTURE_2D, framebufferTexture);
     glUseProgram(blitProgram);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+    // Reset to default state
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -191,6 +227,7 @@ static void renderToFramebuffer()
 int main(int argc, char *argv[])
 {
     initialize_opengl();
+    initialize_opencl();
 
     while (!glfwWindowShouldClose(window))
     {

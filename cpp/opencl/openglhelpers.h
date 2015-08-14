@@ -3,6 +3,12 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#ifdef __APPLE__
+#error include some native headers to get access to raw context...
+#else
+#include <GL/glx.h>
+#endif
+
 #include <iostream>
 #include <cassert>
 #include <cstring>
