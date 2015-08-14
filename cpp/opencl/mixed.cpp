@@ -45,8 +45,15 @@ void glfwErrorCallback(int error, const char *description)
 static void initialize_opencl() {
 
     // OpenCL setup
+    cl_platform_id platforms[16];
+    cl_uint platformCount;
+    clGetPlatformIDs(sizeof(platforms) / sizeof(cl_platform_id), platforms, &platformCount);
+    cout << "OpenCL Platforms found: " << platformCount << endl;
+    assert(platformCount > 0);
+
     cl_uint deviceCount = 0;
-    clGetDeviceIDs(0, CL_DEVICE_TYPE_GPU, sizeof(cl.device), &cl.device, &deviceCount);
+    clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, sizeof(cl.device), &cl.device, &deviceCount);
+    assert(deviceCount);
     cout << "OpenCL GPU devices found: " << deviceCount << endl;
 
     DUMP_CL_DEVICE_STRING_OPTION(cl.device, CL_DEVICE_NAME);
@@ -79,12 +86,10 @@ static void initialize_opencl() {
     CL_CHECK_ERROR(error);
     cout << " - command queue ......: " << cl.commandQueue << endl;
 
-    // clCreateFromGLTexture2D(0, 0, 0, 0, 0, 0);
-    cl.sourceImage = clCreateFromGLTexture2D(cl.context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, 0, &error);
+    cl.sourceImage = clCreateFromGLTexture(cl.context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, 0, &error);
     CL_CHECK_ERROR(error);
     cout << " - source image mem ...: " << cl.sourceImage << endl;
-
-    cl.targetImage = clCreateFromGLTexture2D(cl.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, resultTexture, &error);
+    cl.targetImage = clCreateFromGLTexture(cl.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, resultTexture, &error);
     CL_CHECK_ERROR(error);
     cout << " - target image mem ...: " << cl.targetImage << endl;
 }

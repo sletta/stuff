@@ -112,10 +112,14 @@ int main(int argc, char** argv)
     for(i = 0; i < count; i++)
         data[i] = rand() / (float)RAND_MAX;
 
+    cl_platform_id platform;
+    cl_uint platformCount;
+    clGetPlatformIDs(1, &platform, &platformCount);
+
     // Connect to a compute device
     //
-    int gpu = 0;
-    err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &device_id, NULL);
+    int gpu = 1;
+    err = clGetDeviceIDs(platform, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &device_id, NULL);
     if (err != CL_SUCCESS)
     {
         printf("Error: Failed to create a device group!\n");
