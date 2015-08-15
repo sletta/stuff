@@ -1,6 +1,6 @@
 
-#include "openclhelpers.h"
 #include "openglhelpers.h"
+#include "openclhelpers.h"
 
 #include <iostream>
 #include <cmath>
@@ -72,12 +72,22 @@ static void initialize_opencl() {
 
     // OpenCL context
     cl_int error;
-    cl_context_properties clProperties[] = {
+#ifdef __APPLE__
+    CGLContextObj kCGLContext = CGLGetCurrentContext();
+    CGLShareGroupObj kCGLShareGroup = CGLGetShareGroup(kCGLContext);
+    cl_context_properties clProperties[] =
+    {
+        CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)kCGLShareGroup,
+        0
+    };
+#else
+     cl_context_properties clProperties[] = {
         CL_GL_CONTEXT_KHR, (cl_context_properties) glXGetCurrentContext(),
         CL_GLX_DISPLAY_KHR, (cl_context_properties) glXGetCurrentDisplay(),
         0
     };
-    cl.context = clCreateContext(0, 1, &cl.device, 0, 0, &error);
+#endif
+    cl.context = clCreateContext(clProperties, 1, &cl.device, NULL, NULL, &error);
     CL_CHECK_ERROR(error);
     cout << " - context ............: " << cl.context << endl;
 
@@ -86,7 +96,7 @@ static void initialize_opencl() {
     CL_CHECK_ERROR(error);
     cout << " - command queue ......: " << cl.commandQueue << endl;
 
-    cl.sourceImage = clCreateFromGLTexture(cl.context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, 0, &error);
+    cl.sourceImage = clCreateFromGLTexture(cl.context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, framebufferTexture, &error);
     CL_CHECK_ERROR(error);
     cout << " - source image mem ...: " << cl.sourceImage << endl;
     cl.targetImage = clCreateFromGLTexture(cl.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, resultTexture, &error);
@@ -104,7 +114,8 @@ static void initialize_opengl()
     glfwSetErrorCallback(glfwErrorCallback);
     cout << "GLFW initialized!" << endl;
     window = glfwCreateWindow(1280, 720, "Mixing OpenGL & OpenCL", NULL, NULL);
-    glfwGetWindowSize(window, &windowWidth, &windowHeight);
+    glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
+
     cout << "GLFWwindow ....: " << window << "; size=" << windowWidth << "," << windowHeight << endl;
     glfwMakeContextCurrent(window);
     cout << "OpenGL Context is current!" << endl;

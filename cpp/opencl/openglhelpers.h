@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #ifdef __APPLE__
-#error include some native headers to get access to raw context...
+#include <OpenGL/OpenGL.h>
 #else
 #include <GL/glx.h>
 #endif
@@ -37,7 +37,7 @@ inline GLuint gl_create_shader(const char *sh, GLenum type)
     return id;
 }
 
-inline GLuint gl_create_program(const char *vsh, const char *fsh, const char *attr[]) 
+inline GLuint gl_create_program(const char *vsh, const char *fsh, const char *attr[])
 {
     GLuint vid = gl_create_shader(vsh, GL_VERTEX_SHADER);
     assert(vid);
@@ -50,7 +50,7 @@ inline GLuint gl_create_program(const char *vsh, const char *fsh, const char *at
 
     glAttachShader(pid, vid);
     glAttachShader(pid, fid);
-    for (unsigned i=0; attr[i]; ++i)       
+    for (unsigned i=0; attr[i]; ++i)
         glBindAttribLocation(pid, i, attr[i]);
     glLinkProgram(pid);
 
@@ -72,7 +72,7 @@ inline GLuint gl_create_program(const char *vsh, const char *fsh, const char *at
     }
 
     assert(glGetError() == GL_NO_ERROR);
-    return pid;    
+    return pid;
 }
 
 
@@ -89,7 +89,7 @@ inline GLuint gl_create_texture(int w, int h, void *data = 0)
     return tex;
 }
 
-inline GLuint gl_create_framebufferobject(int width, int height, GLuint *texture) 
+inline GLuint gl_create_framebufferobject(int width, int height, GLuint *texture)
 {
     assert(texture);
     *texture = gl_create_texture(width, height);
@@ -100,7 +100,7 @@ inline GLuint gl_create_framebufferobject(int width, int height, GLuint *texture
 
 #ifndef NDEBUG
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "Failed! gl_create_framebufferobject(" << width << ", " << height 
+        std::cerr << "Failed! gl_create_framebufferobject(" << width << ", " << height
         		  << ") texture=" << texture << std::endl;
         assert(false);
     }
