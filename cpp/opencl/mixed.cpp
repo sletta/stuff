@@ -87,7 +87,7 @@ static void initialize_opencl() {
         0
     };
 #endif
-    cl.context = clCreateContext(clProperties, 1, &cl.device, NULL, NULL, &error);
+    cl.context = clCreateContext(clProperties, 1, &cl.device, openclErrorCallback, 0, &error);
     CL_CHECK_ERROR(error);
     cout << " - context ............: " << cl.context << endl;
 
