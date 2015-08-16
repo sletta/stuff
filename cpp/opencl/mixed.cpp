@@ -107,7 +107,7 @@ static void initialize_opencl() {
     CL_CHECK_ERROR(error);
     cout << " - target image mem ...: " << cl.targetImage << endl;
 
-    string source = io_read_file("invert.cl");
+    string source = io_read_file("mixed.cl");
     const char *sources[] = { source.c_str() };
     cl.program = clCreateProgramWithSource(cl.context, 1, sources, 0, &error);
     CL_CHECK_ERROR(error);
@@ -122,7 +122,7 @@ static void initialize_opencl() {
     CL_CHECK_ERROR(error);
     cout << " - program ............: " << cl.program << endl;
 
-    cl.kernel = clCreateKernel(cl.program, "inverter", &error);
+    cl.kernel = clCreateKernel(cl.program, "glowthing", &error);
     CL_CHECK_ERROR(error);
     cout << " - 'invert' kernel ....: " << cl.kernel << endl;
 
@@ -342,10 +342,4 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
-// Building...
-//
-// OSX: clang++ -framework OpenCL -framework OpenGL -I/usr/local/include mixed.cpp -L/usr/local/lib -lglfw3  -o mixed && ./mixed
-// Linux: g++ mixed.cpp -lOpenCL -lglfw -lGL -o mixed
-//
 
