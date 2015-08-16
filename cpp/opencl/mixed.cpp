@@ -113,6 +113,12 @@ static void initialize_opencl() {
     CL_CHECK_ERROR(error);
 
     error = clBuildProgram(cl.program, 0, 0, 0, 0, 0);
+    if (error =! CL_SUCCESS) {
+        size_t len;
+        char buffer[2048];
+        clGetProgramBuildInfo(cl.program, cl.device, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+        cout << buffer << endl;
+    }
     CL_CHECK_ERROR(error);
     cout << " - program ............: " << cl.program << endl;
 
@@ -280,11 +286,23 @@ static void runOpenCLKernel()
     status = clSetKernelArg(cl.kernel, 1, sizeof(cl_mem), (void *) &cl.targetImage);
     CL_CHECK_ERROR(status);
 
+    cl_event event;
     size_t dim[] = { windowWidth, windowHeight };
-    status = clEnqueueNDRangeKernel(cl.commandQueue, cl.kernel, 2, 0, dim, 0, 0, 0, 0);
+    status = clEnqueueNDRangeKernel(cl.commandQueue, cl.kernel, 2, 0, dim, 0, 0, 0, &event);
+    CL_CHECK_ERROR(status);
 
     status = clEnqueueReleaseGLObjects(cl.commandQueue, 2, textures, 0, 0, 0);
     CL_CHECK_ERROR(status);
+
+    status = clWaitForEvents(1, &event);
+    CL_CHECK_ERROR(status);
+
+    cl_ulong start, end;
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(start), &start, NULL);
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(end), &end, NULL);
+
+    cout << "kernel exectued in: " << (end - start) / 1000 << "." << ((end - start) % 1000) << " micro seconds" << endl;
+
 
     status = clFinish(cl.commandQueue);
     CL_CHECK_ERROR(status);

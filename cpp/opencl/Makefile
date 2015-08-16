@@ -10,7 +10,7 @@ else
 	OS=linux
 	CC=g++
 	CFLAGS=-g
-	LFLAGS=-lglfw3 -lGLES -lOpenCL -lGL
+	LFLAGS=-lglfw -lGLEW -lOpenCL -lGL
 endif
 
 all: mixed clinfo

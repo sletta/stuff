@@ -12,6 +12,8 @@
 #include <iostream>
 #include <cassert>
 #include <cstring>
+#include <stdlib.h>
+#include <stdio.h>
 
 inline GLuint gl_create_shader(const char *sh, GLenum type)
 {
