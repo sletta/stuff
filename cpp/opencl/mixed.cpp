@@ -113,7 +113,7 @@ static void initialize_opencl() {
     CL_CHECK_ERROR(error);
 
     error = clBuildProgram(cl.program, 0, 0, 0, 0, 0);
-    if (error =! CL_SUCCESS) {
+    if (error != CL_SUCCESS) {
         size_t len;
         char buffer[2048];
         clGetProgramBuildInfo(cl.program, cl.device, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
