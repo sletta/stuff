@@ -1,6 +1,7 @@
 
 #include "openglhelpers.h"
 #include "openclhelpers.h"
+#include "ioutils.h"
 
 #include <iostream>
 #include <cmath>
@@ -30,6 +31,8 @@ static struct {
     cl_command_queue commandQueue;
     cl_mem sourceImage;
     cl_mem targetImage;
+    cl_program program;
+    cl_kernel kernel;
 } cl;
 
 static void openclErrorCallback(const char *errinfo, const void *privateInfo, size_t cb, void *userData)
@@ -66,6 +69,7 @@ static void initialize_opencl() {
     DUMP_CL_DEVICE_INT_OPTION(cl.device, CL_DEVICE_MAX_CLOCK_FREQUENCY);
     DUMP_CL_DEVICE_ULONG_OPTION(cl.device, CL_DEVICE_LOCAL_MEM_SIZE);
     DUMP_CL_DEVICE_ULONG_OPTION(cl.device, CL_DEVICE_GLOBAL_MEM_SIZE);
+    DUMP_CL_DEVICE_INT_OPTION(cl.device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS);
     DUMP_CL_DEVICE_STRING_OPTION(cl.device, CL_DEVICE_EXTENSIONS);
 
     cout << "OpenCL Objects:" << endl;
@@ -102,6 +106,20 @@ static void initialize_opencl() {
     cl.targetImage = clCreateFromGLTexture(cl.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, resultTexture, &error);
     CL_CHECK_ERROR(error);
     cout << " - target image mem ...: " << cl.targetImage << endl;
+
+    string source = io_read_file("invert.cl");
+    const char *sources[] = { source.c_str() };
+    cl.program = clCreateProgramWithSource(cl.context, 1, sources, 0, &error);
+    CL_CHECK_ERROR(error);
+
+    error = clBuildProgram(cl.program, 0, 0, 0, 0, 0);
+    CL_CHECK_ERROR(error);
+    cout << " - program ............: " << cl.program << endl;
+
+    cl.kernel = clCreateKernel(cl.program, "inverter", &error);
+    CL_CHECK_ERROR(error);
+    cout << " - 'invert' kernel ....: " << cl.kernel << endl;
+
 }
 
 static void initialize_opengl()
@@ -194,6 +212,12 @@ static void initialize_opengl()
     glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
     cout << " - vertex buffer .....: " << textureQuadBuffer << endl;
 
+    // We only use these
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, 0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void *) (sizeof(float) * 2));
+
     resultTexture = gl_create_texture(windowWidth, windowHeight, 0);
     cout << " - result texture ....: " << resultTexture << endl;
 
@@ -208,8 +232,6 @@ static void renderToFramebuffer()
     glViewport(0, 0, windowWidth, windowHeight);
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
 
     // Render the fractal to the FBO
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -219,25 +241,53 @@ static void renderToFramebuffer()
     float cx = sin(t) * 0.5;
     float cy = cos(t);
     glUniform2f(fractalUniformC, cx, cy);
-    glBindBuffer(GL_ARRAY_BUFFER, textureQuadBuffer);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, 0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void *) (sizeof(float) * 2));
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // Render the FBO to the screen..
-    // attribute arrays and buffer can be reused, so leave them be
-    glBindTexture(GL_TEXTURE_2D, framebufferTexture);
-    glUseProgram(blitProgram);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    // // Render the FBO to the screen..
+    // // attribute arrays and buffer can be reused, so leave them be
+    // glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+    // glUseProgram(blitProgram);
+    // glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     // Reset to default state
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
     glBindTexture(GL_TEXTURE_2D, 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(0);
+}
+
+static void renderResultTexture()
+{
+    glBindTexture(GL_TEXTURE_2D, resultTexture);
+    glUseProgram(blitProgram);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUseProgram(0);
+}
+
+static void runOpenCLKernel()
+{
+    cl_int status;
+    cl_mem textures[] = { cl.sourceImage, cl.targetImage };
+    status = clEnqueueAcquireGLObjects(cl.commandQueue, 2, textures, 0, 0, 0);
+    CL_CHECK_ERROR(status);
+
+    status = clSetKernelArg(cl.kernel, 0, sizeof(cl_mem), (void *) &cl.sourceImage);
+    CL_CHECK_ERROR(status);
+    status = clSetKernelArg(cl.kernel, 1, sizeof(cl_mem), (void *) &cl.targetImage);
+    CL_CHECK_ERROR(status);
+
+    size_t dim[] = { windowWidth, windowHeight };
+    status = clEnqueueNDRangeKernel(cl.commandQueue, cl.kernel, 2, 0, dim, 0, 0, 0, 0);
+
+    status = clEnqueueReleaseGLObjects(cl.commandQueue, 2, textures, 0, 0, 0);
+    CL_CHECK_ERROR(status);
+
+    status = clFinish(cl.commandQueue);
+    CL_CHECK_ERROR(status);
 }
 
 int main(int argc, char *argv[])
@@ -248,6 +298,12 @@ int main(int argc, char *argv[])
     while (!glfwWindowShouldClose(window))
     {
         renderToFramebuffer();
+        glFinish();
+
+        runOpenCLKernel();
+
+        renderResultTexture();
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
