@@ -211,10 +211,12 @@ static void initialize_opengl()
 
     glGenBuffers(1, &textureQuadBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, textureQuadBuffer);
-    float data[] = { -1, -1, 0, 0,
-                      1, -1, 1, 0,
-                     -1,  1, 0, 1,
-                      1,  1, 1, 1 };
+    float data[] = { -1,  1,   0, 0,
+                     -1, -1,   0, 1,
+                      0,  1, 0.5, 0,
+                      0, -1, 0.5, 1,
+                      1,  1,   1, 0,
+                      1, -1,   1, 1 };
     glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
     cout << " - vertex buffer .....: " << textureQuadBuffer << endl;
 
@@ -247,7 +249,7 @@ static void renderToFramebuffer()
     float cx = sin(t) * 0.5;
     float cy = cos(t);
     glUniform2f(fractalUniformC, cx, cy);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // // Render the FBO to the screen..
@@ -264,10 +266,13 @@ static void renderToFramebuffer()
 
 static void renderResultTexture()
 {
-    glBindTexture(GL_TEXTURE_2D, resultTexture);
     glUseProgram(blitProgram);
 
+    glBindTexture(GL_TEXTURE_2D, framebufferTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glBindTexture(GL_TEXTURE_2D, resultTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 2, 4);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -286,23 +291,30 @@ static void runOpenCLKernel()
     status = clSetKernelArg(cl.kernel, 1, sizeof(cl_mem), (void *) &cl.targetImage);
     CL_CHECK_ERROR(status);
 
+    static int counter = 300;
+    bool profile = false;
+    --counter;
+    if (counter < 0) {
+        counter = 300;
+        profile = true;
+    }
+
     cl_event event;
     size_t dim[] = { windowWidth, windowHeight };
-    status = clEnqueueNDRangeKernel(cl.commandQueue, cl.kernel, 2, 0, dim, 0, 0, 0, &event);
+    status = clEnqueueNDRangeKernel(cl.commandQueue, cl.kernel, 2, 0, dim, 0, 0, 0, profile ? &event : 0);
     CL_CHECK_ERROR(status);
 
     status = clEnqueueReleaseGLObjects(cl.commandQueue, 2, textures, 0, 0, 0);
     CL_CHECK_ERROR(status);
 
-    status = clWaitForEvents(1, &event);
-    CL_CHECK_ERROR(status);
-
-    cl_ulong start, end;
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(start), &start, NULL);
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(end), &end, NULL);
-
-    cout << "kernel exectued in: " << (end - start) / 1000 << "." << ((end - start) % 1000) << " micro seconds" << endl;
-
+    if (profile) {
+        status = clWaitForEvents(1, &event);
+        CL_CHECK_ERROR(status);
+        cl_ulong start, end;
+        clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(start), &start, NULL);
+        clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(end), &end, NULL);
+        cout << "kernel exectued in: " << (end - start) / 1000 << "." << ((end - start) % 1000) << " us" << endl;
+    }
 
     status = clFinish(cl.commandQueue);
     CL_CHECK_ERROR(status);

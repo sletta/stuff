@@ -4,22 +4,22 @@ __kernel void inverter(__read_only image2d_t source, __write_only image2d_t targ
 {
 #if 1
     float2 pos = { get_global_id(0), get_global_id(1) };
-    float4 pixel = 
-          read_imagef(source, sampler, (float2)(pos.x + 0.5, pos.y + 0.5))
-        + read_imagef(source, sampler, (float2)(pos.x - 0.5, pos.y + 0.5))
-        + read_imagef(source, sampler, (float2)(pos.x + 0.5, pos.y - 0.5))
-        + read_imagef(source, sampler, (float2)(pos.x - 0.5, pos.y - 0.5))
+    float4 pixel =
+          read_imagef(source, sampler, (float2)(pos.x + 0.5f, pos.y + 0.5f))
+        + read_imagef(source, sampler, (float2)(pos.x - 0.5f, pos.y + 0.5f))
+        + read_imagef(source, sampler, (float2)(pos.x + 0.5f, pos.y - 0.5f))
+        + read_imagef(source, sampler, (float2)(pos.x - 0.5f, pos.y - 0.5f))
         ;
     write_imagef(target, (int2)(pos.x, pos.y), pixel * 9.0f / 4.0f);
 
     /*
-        Running at: 101 us 
+        Running at: 101 us
      */
-#endif 
+#endif
 
 #if 0
     int2 pos = { get_global_id(0), get_global_id(1) };
-    float4 pixel = 
+    float4 pixel =
           read_imagef(source, sampler, pos + (int2)(+1, +1))
         + read_imagef(source, sampler, pos + (int2)(+0, +1))
         + read_imagef(source, sampler, pos + (int2)(-1, +1))
@@ -35,7 +35,7 @@ __kernel void inverter(__read_only image2d_t source, __write_only image2d_t targ
     /*
         Running at: 163 ms
      */
-#endif 
+#endif
 
 #if 0
     int2 pos = { get_global_id(0), get_global_id(1) };
@@ -55,6 +55,6 @@ __kernel void inverter(__read_only image2d_t source, __write_only image2d_t targ
     /*
         Running at: 163 ms
      */
-#endif 
+#endif
 
 }
