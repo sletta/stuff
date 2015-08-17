@@ -55,7 +55,7 @@ static void initialize_opencl() {
     assert(platformCount > 0);
 
     cl_uint deviceCount = 0;
-    clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, sizeof(cl.device), &cl.device, &deviceCount);
+    clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 1, &cl.device, &deviceCount);
     assert(deviceCount);
     cout << "OpenCL GPU devices found: " << deviceCount << endl;
 
