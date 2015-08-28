@@ -29,6 +29,12 @@
     clGetDeviceInfo(device, name, sizeof(__##name), __##name, 0);            \
     std::cout << #name << ' ' << setfill('.') << setw(35 - strlen(#name)) << ": " << __##name << std::endl;
 
+#define DUMP_CL_PLATFORM_STRING_OPTION(platform, name)                         \
+    char __##name[1024];                                                     \
+    clGetPlatformInfo(platform, name, sizeof(__##name), __##name, 0);          \
+    std::cout << #name << ' ' << setfill('.') << setw(35 - strlen(#name)) << ": " << __##name << std::endl;
+
+
 // This will expand to a lot of code, so probably not a good idea to have inline,
 // but for now it is convenient...
 inline void CL_CHECK_ERROR(cl_int error)
