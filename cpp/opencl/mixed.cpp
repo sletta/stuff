@@ -9,6 +9,12 @@
 using namespace std;
 
 #define USE_FRAMEBUFFER
+#define USE_EXTRA_TEXTURE
+
+// Ensure framebuffer is used when USE_EXTRA_TEXTURE is used.
+#if defined(USE_EXTRA_TEXTURE) && !defined(USE_FRAMEBUFFER)
+#define USE_FRAMEBUFFER
+#endif
 
 // Globals, put here for convenience...
 
@@ -20,6 +26,9 @@ static int windowHeight;
 // OpenGL
 #if defined(USE_FRAMEBUFFER)
 static GLuint framebuffer;
+#endif
+#if defined(USE_EXTRA_TEXTURE)
+static GLuint extraTexture;
 #endif
 static GLuint framebufferTexture;
 static GLuint resultTexture;
@@ -104,7 +113,13 @@ static void initialize_opencl() {
     CL_CHECK_ERROR(error);
     cout << " - command queue ......: " << cl.commandQueue << endl;
 
-    cl.sourceImage = clCreateFromGLTexture(cl.context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, framebufferTexture, &error);
+    cl.sourceImage = clCreateFromGLTexture(cl.context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0,
+#if defined(USE_EXTRA_TEXTURE)
+        extraTexture,
+#else
+        framebufferTexture,
+#endif
+        &error);
     CL_CHECK_ERROR(error);
     cout << " - source image mem ...: " << cl.sourceImage << endl;
     cl.targetImage = clCreateFromGLTexture(cl.context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, resultTexture, &error);
@@ -178,6 +193,9 @@ static void initialize_opengl()
     framebufferTexture = gl_create_texture(windowWidth, windowHeight, textureBits);
 #endif
 
+#if defined(USE_EXTRA_TEXTURE)
+    extraTexture = gl_create_texture(windowWidth, windowHeight);
+#endif
 
     const char *fractalAttributes[] = { "aV", "aTC", 0 };
     fractalProgram = gl_create_program(// Vertex Shader
@@ -267,6 +285,12 @@ static void renderToFramebuffer()
     float cy = cos(t);
     glUniform2f(fractalUniformC, cx, cy);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
+
+#if defined(USE_EXTRA_TEXTURE)
+    glBindTexture(GL_TEXTURE_2D, extraTexture);
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, windowWidth, windowHeight, 0);
+#endif
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // // Render the FBO to the screen..
@@ -274,6 +298,7 @@ static void renderToFramebuffer()
     // glBindTexture(GL_TEXTURE_2D, framebufferTexture);
     // glUseProgram(blitProgram);
     // glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
 
     // Reset to default state
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -286,7 +311,11 @@ static void renderResultTexture()
 {
     glUseProgram(blitProgram);
 
+#if defined(USE_EXTRA_TEXTURE)
+    glBindTexture(GL_TEXTURE_2D, extraTexture);
+#else
     glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+#endif
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     glBindTexture(GL_TEXTURE_2D, resultTexture);
@@ -342,6 +371,13 @@ int main(int argc, char *argv[])
 {
     initialize_opengl();
     initialize_opencl();
+
+#if defined(USE_FRAMEBUFFER)
+    cout << "Feature: Rendering to Framebuffer" << endl;
+#endif
+#if defined(USE_EXTRA_TEXTURE)
+    cout << "Feature: Using an extra texture" << endl;
+#endif
 
     while (!glfwWindowShouldClose(window))
     {
