@@ -8,6 +8,8 @@
 
 using namespace std;
 
+// #define USE_FRAMEBUFFER
+
 // Globals, put here for convenience...
 
 // GLFW (windowing stuff)
@@ -16,7 +18,9 @@ static int windowWidth;
 static int windowHeight;
 
 // OpenGL
+#if defined(USE_FRAMEBUFFER)
 static GLuint framebuffer;
+#endif
 static GLuint framebufferTexture;
 static GLuint resultTexture;
 static GLuint fractalProgram;
@@ -50,7 +54,7 @@ static void initialize_opencl() {
     // OpenCL setup
     cl_platform_id platforms[16];
     cl_uint platformCount;
-    clGetPlatformIDs(sizeof(platforms) / sizeof(cl_platform_id), platforms, &platformCount);
+    clGetPlatformIDs(16, platforms, &platformCount);
     cout << "OpenCL Platforms found: " << platformCount << endl;
     assert(platformCount > 0);
 
@@ -158,10 +162,22 @@ static void initialize_opengl()
     cout << "GLEW initialized!" << endl << endl;
 
     cout << "OpenGL Objects:" << endl;
+
+#if defined(USE_FRAMEBUFFER)
     framebuffer = gl_create_framebufferobject(windowWidth, windowHeight, &framebufferTexture);
     cout << " - framebuffer .......: " << framebuffer
          << " (texture=" << framebufferTexture << ")" << endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#else
+    int *textureBits = new int[windowWidth * windowHeight];
+    for (int y=0; y<windowHeight; ++y) {
+        for (int x=0; x<windowWidth; ++x) {
+            textureBits[x + windowWidth * y] = (0xff00000f) | ((x&0xff) << 8) | ((y&0xff) << 16);
+        }
+    }
+    framebufferTexture = gl_create_texture(windowWidth, windowHeight, textureBits);
+#endif
+
 
     const char *fractalAttributes[] = { "aV", "aTC", 0 };
     fractalProgram = gl_create_program(// Vertex Shader
@@ -234,6 +250,7 @@ static void initialize_opengl()
     glFinish();
 }
 
+#if defined(USE_FRAMEBUFFER)
 static void renderToFramebuffer()
 {
     // Prepare to draw frame, initial setup..
@@ -263,6 +280,7 @@ static void renderToFramebuffer()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(0);
 }
+#endif
 
 static void renderResultTexture()
 {
@@ -327,8 +345,10 @@ int main(int argc, char *argv[])
 
     while (!glfwWindowShouldClose(window))
     {
+#if defined(USE_FRAMEBUFFER)
         renderToFramebuffer();
         glFinish();
+#endif
 
         runOpenCLKernel();
 
