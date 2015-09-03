@@ -8,7 +8,7 @@
 
 using namespace std;
 
-// #define USE_FRAMEBUFFER
+#define USE_FRAMEBUFFER
 
 // Globals, put here for convenience...
 
