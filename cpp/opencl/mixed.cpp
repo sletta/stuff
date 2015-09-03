@@ -9,7 +9,7 @@
 using namespace std;
 
 #define USE_FRAMEBUFFER
-#define USE_EXTRA_TEXTURE
+// #define USE_EXTRA_TEXTURE
 
 // Ensure framebuffer is used when USE_EXTRA_TEXTURE is used.
 #if defined(USE_EXTRA_TEXTURE) && !defined(USE_FRAMEBUFFER)
