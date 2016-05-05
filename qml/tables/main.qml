@@ -25,7 +25,7 @@ Rectangle
         repeat: false
         onTriggered: {
             var startTime = new Date().getTime();
-            var count = 1000;
+            var count = 100;
             print("Now starting...");
             for (var i=0; i<count; ++i) {
                 loader.source = "";

@@ -14,11 +14,11 @@ ListView {
     clip: true
     model: tableModel
     delegate: Item {
-        id: rowContainer
-        width: cellWidth + cellSpacing
+        width: rowContainer.width
         height: cellHeight + cellSpacing
 
         Row {
+            id: rowContainer
             spacing: cellSpacing
             Repeater {
                 model: columnSize;
@@ -41,86 +41,37 @@ ListView {
 
                     Component {
                         id: comp0
-                        Item {
-                            width: cellWidth
-                            height: cellHeight
-
-                            Rectangle {
-                                anchors.fill: parent
-                                color: Qt.hsla(0 / 7.0, 0.5, 0.3);
-                            }
-
-                            Text {
-                                text: column0;
-                                anchors.centerIn: parent
-                                color: "white"
-                            }
-                        }
+                        Delegate0 { width: cellWidth; height: cellHeight }
                     }
 
                     Component {
                         id: comp1
-                        Item {
-                            width: cellWidth
-                            height: cellHeight
-
-                            Rectangle {
-                                anchors.fill: parent
-                                color: Qt.hsla(1 / 7.0, 0.5, 0.3);
-                            }
-
-                            Text {
-                                text: column1;
-                                anchors.centerIn: parent
-                                color: "white"
-                                font.italic: true
-                            }
-                        }
+                        Delegate1 { width: cellWidth; height: cellHeight }
                     }
 
                     Component {
                         id: comp2
-                        Item {
-                            width: cellWidth; height: cellHeight;
-                            Rectangle { color: Qt.hsla(2 / 7.0, 0.5, 0.3); anchors.fill: parent; }
-                            Text { text: column3; anchors.centerIn: parent; color: "white"; font.bold: true }
-                        }
+                        Delegate2 { width: cellWidth; height: cellHeight }
                     }
 
                     Component {
                         id: comp3
-                        Item {
-                            width: cellWidth; height: cellHeight;
-                            Rectangle { color: Qt.hsla(3 / 7.0, 0.5, 0.3); anchors.fill: parent; }
-                            Text { text: column3; anchors.centerIn: parent; color: Qt.hsla(0.6, 0.5, 0.9); }
-                        }
+                        Delegate3 { width: cellWidth; height: cellHeight }
                     }
 
                     Component {
                         id: comp4
-                        Item {
-                            width: cellWidth; height: cellHeight;
-                            Rectangle { color: Qt.hsla(4 / 7.0, 0.5, 0.3); anchors.fill: parent; }
-                            Text { text: column4; anchors.centerIn: parent; color: "white"; font.underline: true }
-                        }
+                        Delegate4 { width: cellWidth; height: cellHeight }
                     }
 
                     Component {
                         id: comp5
-                        Item {
-                            width: cellWidth; height: cellHeight;
-                            Rectangle { color: Qt.hsla(5 / 7.0, 0.5, 0.3); anchors.fill: parent; border.color: "white"; radius: 4 }
-                            Text { text: column5; anchors.centerIn: parent; color: "white"; style: Text.Raised }
-                        }
+                        Delegate5 { width: cellWidth; height: cellHeight }
                     }
 
                     Component {
                         id: comp6
-                        Item {
-                            width: cellWidth; height: cellHeight;
-                            Rectangle { color: Qt.hsla(6 / 7.0, 0.5, 0.8); anchors.fill: parent; }
-                            Text { text: column6; anchors.centerIn: parent; color: "black" }
-                        }
+                        Delegate6 { width: cellWidth; height: cellHeight }
                     }
                 }
             }
