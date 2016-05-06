@@ -5,6 +5,12 @@
 class Model : public QAbstractListModel
 {
 public:
+    enum CustomRoles {
+        ColumnValue = Qt::UserRole + 1,
+        ColumnType = Qt::UserRole + 100,
+        ColumnSize = ColumnType + 200
+    };
+
     Model();
 
     int rowCount(const QModelIndex &) const Q_DECL_OVERRIDE { return 1000; }
@@ -13,11 +19,6 @@ public:
     QHash<int, QByteArray> roleNames() const Q_DECL_OVERRIDE { return m_roleNames; }
 
 private:
-    enum CustomRoles {
-        ColumnValue = Qt::UserRole + 1,
-        ColumnType = Qt::UserRole + 100,
-        ColumnSize = ColumnType + 200
-    };
 
     QHash<int, QByteArray> m_roleNames;
 };

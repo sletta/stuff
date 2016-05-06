@@ -7,8 +7,13 @@ TARGET = tables
 INCLUDEPATH += .
 
 # Input
-HEADERS += model.h
-SOURCES += main.cpp
+HEADERS += \
+    model.h \
+    tablerow.h \
+
+SOURCES += \
+    main.cpp \
+    tablerow.cpp \
 
 QT += quick
 
