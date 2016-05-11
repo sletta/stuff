@@ -5,12 +5,23 @@ Item
 {
 	id: root
 
-	width: 800
-	height: 480
+	width: 1280
+	height: 720
 
-	VLCItem {
-		source: "movie.mp4"
+	Grid {
+		id: grid
 		anchors.fill: parent
+		columns: 8
+		rows: 6
+
+		Repeater {
+			model: grid.rows * grid.columns
+			VLCItem {
+				source: "movie.mp4"
+				width: grid.width / grid.columns
+				height: grid.height / grid.rows
+			}
+		}
 	}
 
 

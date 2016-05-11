@@ -45,6 +45,8 @@ static unsigned cb_videoFormat(void **opaque, char *chroma, unsigned *width, uns
 {
 	qDebug() << "VLC Callback: videoFormat" << opaque << chroma << *width << *height << *pitches << *lines;
 	VLCItem *self = (VLCItem *) (*opaque);
+	*height = 180;
+	*width = 240;
 	return self->allocate(chroma, width, height, pitches, lines);
 }
 
@@ -62,7 +64,8 @@ void VLCItem::updatePolish()
 
 	const char *vlcArgv[] = {
 		"--no-audio",
-		"--no-xlib"
+		"--no-xlib",
+		"--swscale-mode=4"
 	};
 	int vlcArgc = sizeof(vlcArgv) / sizeof(*vlcArgv);
  	m_vlc = libvlc_new(vlcArgc, vlcArgv);
@@ -89,7 +92,7 @@ int VLCItem::allocate(char *chroma, unsigned *width, unsigned *height, unsigned 
 		return 0;
 	}
 
-	const int POOL_SIZE = 4;
+	const int POOL_SIZE = 5;
 	for (int i=0; i<POOL_SIZE; ++i) {
 		VLCFrame frame;
 		frame.y = QImage(*width, *height, QImage::Format_Grayscale8);
@@ -116,10 +119,10 @@ void *VLCItem::lock(void **planes)
 {
 	QMutexLocker locker(&m_writeQueueMutex);
 	if (m_writeQueue.isEmpty()) {
-		qDebug() << "VLCItem::lock: out of frames, need to wait..";
+		// qDebug() << "VLCItem::lock: out of frames, need to wait..";
 		m_writeQueueCondition.wait(&m_writeQueueMutex);
 		Q_ASSERT(m_writeQueue.size() > 0);
-		qDebug() << "VLCItem::lock: was out of frames, now in good shape again..";
+		// qDebug() << "VLCItem::lock: was out of frames, now in good shape again..";
 	}
 
 	VLCFrame frame = m_writeQueue.dequeue();
@@ -162,7 +165,7 @@ public:
 	{
 	}
 
-	void update(const QImage &plane)
+	void update(const QImage &plane, int w, int h)
 	{
 		QOpenGLFunctions *gl = QOpenGLContext::currentContext()->functions();
 
@@ -177,7 +180,7 @@ public:
 			gl->glBindTexture(GL_TEXTURE_2D, m_id);
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, plane.width(), plane.height(), 0, GL_RED, GL_UNSIGNED_BYTE, plane.constBits());
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, plane.constBits());
 	}
 
 	int textureId() const Q_DECL_OVERRIDE { return m_id; }
@@ -187,6 +190,7 @@ public:
     void bind() Q_DECL_OVERRIDE  { glBindTexture(GL_TEXTURE_2D, m_id); }
 
 private:
+	QByteArray m_buffer;
 	unsigned int m_id;
 	QSize m_size;
 };
@@ -302,6 +306,15 @@ QSGNode *VLCItem::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
 	}
 
 	VLCFrame frame = m_displayQueue.dequeue();
+	// If we have multiple ones posted, skip to the most recent one
+	if (!m_displayQueue.isEmpty()) {
+		QMutexLocker locker(&m_writeQueueMutex);
+		while (!m_displayQueue.isEmpty()) {
+			m_writeQueue.enqueue(frame);
+			frame = m_displayQueue.dequeue();
+		}
+		m_writeQueueCondition.wakeOne();
+	}
 	m_displayQueueMutex.unlock();
 
 	I420Node *node = static_cast<I420Node *>(old);
@@ -318,14 +331,18 @@ QSGNode *VLCItem::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
 		node->setFlag(QSGNode::OwnsMaterial, true);
 	}
 
-	QElapsedTimer timer; timer.start();
+	// QElapsedTimer timer; timer.start();
 
 	// Push the new frame data into textures
-	node->planes.y->update(frame.y);
-	node->planes.u->update(frame.u);
-	node->planes.v->update(frame.v);
+	// int w = width();
+	// int h = height();
+	int w = frame.y.width();
+	int h = frame.y.height();
+	node->planes.y->update(frame.y, w, h);
+	node->planes.u->update(frame.u, w / 2, h / 2);
+	node->planes.v->update(frame.v, w / 2, h / 2);
 
-	qDebug() << "uploaded in" << timer.nsecsElapsed() / 1000000.0;
+	// qDebug() << "uploaded in" << timer.nsecsElapsed() / 1000000.0;
 
 	// Now that the buffer is uploaded, give it back to the write queue.
 	m_writeQueueMutex.lock();
