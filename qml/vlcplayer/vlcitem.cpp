@@ -45,14 +45,19 @@ static unsigned cb_videoFormat(void **opaque, char *chroma, unsigned *width, uns
 {
 	qDebug() << "VLC Callback: videoFormat" << opaque << chroma << *width << *height << *pitches << *lines;
 	VLCItem *self = (VLCItem *) (*opaque);
-	*height = 180;
-	*width = 240;
 	return self->allocate(chroma, width, height, pitches, lines);
 }
 
 static void cb_cleanup(void *opaque)
 {
 	qDebug() << "VLC Callback: cleanup" << opaque;
+}
+
+static void cb_log(void *data, int level, const libvlc_log_t *ctx, const char *fmt, va_list args)
+{
+	char str[1024];
+	vsprintf(str, fmt, args);
+	qDebug() << "VLC Log: " << level << str;
 }
 
 void VLCItem::updatePolish()
@@ -64,14 +69,20 @@ void VLCItem::updatePolish()
 
 	const char *vlcArgv[] = {
 		"--no-audio",
-		"--no-xlib",
-		"--swscale-mode=4"
+		"--no-xlib"
 	};
 	int vlcArgc = sizeof(vlcArgv) / sizeof(*vlcArgv);
  	m_vlc = libvlc_new(vlcArgc, vlcArgv);
  	qDebug() << " - instance:" << m_vlc;
 
-	m_vlcMedia = libvlc_media_new_path(m_vlc, qPrintable(source()));
+ 	libvlc_log_set(m_vlc, cb_log, 0);
+
+ 	if (source().startsWith(QStringLiteral("rtsp://"))) {
+ 		m_vlcMedia = libvlc_media_new_location(m_vlc, qPrintable(source()));
+		libvlc_media_add_option(m_vlcMedia, ":network-caching=32");
+	} else {
+		m_vlcMedia = libvlc_media_new_path(m_vlc, qPrintable(source()));
+	}
 	qDebug() << " - media:" << m_vlcMedia;
 
 	m_vlcPlayer = libvlc_media_player_new_from_media(m_vlcMedia);
@@ -92,7 +103,11 @@ int VLCItem::allocate(char *chroma, unsigned *width, unsigned *height, unsigned 
 		return 0;
 	}
 
-	const int POOL_SIZE = 5;
+	const int POOL_SIZE = 1;
+
+	Q_ASSERT(*width % 2 == 0);
+	Q_ASSERT(*height % 2 == 0);
+
 	for (int i=0; i<POOL_SIZE; ++i) {
 		VLCFrame frame;
 		frame.y = QImage(*width, *height, QImage::Format_Grayscale8);
@@ -112,6 +127,8 @@ int VLCItem::allocate(char *chroma, unsigned *width, unsigned *height, unsigned 
 	lines[1] = frame.u.height();
 	lines[2] = frame.v.height();
 
+	qDebug(" - pitches [0]=%d/%x, [1]=%d/%x, [2]=%d/%x", pitches[0], pitches[0], pitches[1], pitches[1], pitches[2], pitches[2]);
+
 	return POOL_SIZE;
 }
 
@@ -126,10 +143,14 @@ void *VLCItem::lock(void **planes)
 	}
 
 	VLCFrame frame = m_writeQueue.dequeue();
+
 	// Using constBits to avoid internal detach() and deep copy.
 	planes[0] = (void *) frame.y.constBits();
 	planes[1] = (void *) frame.u.constBits();
 	planes[2] = (void *) frame.v.constBits();
+
+	qDebug(" - planes [0]=%p, [1]=%p, [2]=%p", planes[0], planes[1], planes[2]);
+
 	return planes[0];
 }
 
@@ -165,7 +186,7 @@ public:
 	{
 	}
 
-	void update(const QImage &plane, int w, int h)
+	virtual void update(const QImage &plane)
 	{
 		QOpenGLFunctions *gl = QOpenGLContext::currentContext()->functions();
 
@@ -180,7 +201,7 @@ public:
 			gl->glBindTexture(GL_TEXTURE_2D, m_id);
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, plane.constBits());
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, plane.width(), plane.height(), 0, GL_RED, GL_UNSIGNED_BYTE, plane.constBits());
 	}
 
 	int textureId() const Q_DECL_OVERRIDE { return m_id; }
@@ -189,8 +210,7 @@ public:
     bool hasMipmaps() const Q_DECL_OVERRIDE  { return false; }
     void bind() Q_DECL_OVERRIDE  { glBindTexture(GL_TEXTURE_2D, m_id); }
 
-private:
-	QByteArray m_buffer;
+protected:
 	unsigned int m_id;
 	QSize m_size;
 };
@@ -334,13 +354,9 @@ QSGNode *VLCItem::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
 	// QElapsedTimer timer; timer.start();
 
 	// Push the new frame data into textures
-	// int w = width();
-	// int h = height();
-	int w = frame.y.width();
-	int h = frame.y.height();
-	node->planes.y->update(frame.y, w, h);
-	node->planes.u->update(frame.u, w / 2, h / 2);
-	node->planes.v->update(frame.v, w / 2, h / 2);
+	node->planes.y->update(frame.y);
+	node->planes.u->update(frame.u);
+	node->planes.v->update(frame.v);
 
 	// qDebug() << "uploaded in" << timer.nsecsElapsed() / 1000000.0;
 

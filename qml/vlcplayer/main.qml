@@ -11,8 +11,8 @@ Item
 	Grid {
 		id: grid
 		anchors.fill: parent
-		columns: 8
-		rows: 6
+		columns: 1
+		rows: 1
 
 		Repeater {
 			model: grid.rows * grid.columns
