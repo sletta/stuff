@@ -25,20 +25,20 @@ static void *cb_lock(void *opaque, void **planes)
 {
 	VLCItem *self = (VLCItem *) (opaque);
 	void *picture = self->lock(planes);
-	qDebug() << "VLC Callback: locked	" << opaque << planes << picture;
+	// qDebug() << "VLC Callback: locked	" << opaque << planes << picture;
 	return picture;
 }
 
 static void cb_unlock(void *opaque, void *picture, void *const *planes)
 {
-	qDebug() << "VLC Callback: unlock" << opaque << picture << planes;
+	// qDebug() << "VLC Callback: unlock" << opaque << picture << planes;
 	VLCItem *self = (VLCItem *) (opaque);
 	return self->unlock(picture, planes);
 }
 
 static void cb_display(void *opaque, void *picture)
 {
-	qDebug() << "VLC Callback: display" << opaque << picture;
+	// qDebug() << "VLC Callback: display" << opaque << picture;
 	VLCItem *self = (VLCItem *) opaque;
 	self->display(picture);
 }
@@ -70,7 +70,9 @@ void VLCItem::updatePolish()
  	qDebug() << "VLC:";
 
 	const char *vlcArgv[] = {
-		"--no-audio"
+		"--no-audio",
+		"--avcodec-hw=vdpau-nvidia",
+		"--swscale-mode=4"
 	};
 	int vlcArgc = sizeof(vlcArgv) / sizeof(*vlcArgv);
  	m_vlc = libvlc_new(vlcArgc, vlcArgv);
@@ -80,7 +82,7 @@ void VLCItem::updatePolish()
 
  	if (source().startsWith(QStringLiteral("rtsp://"))) {
  		m_vlcMedia = libvlc_media_new_location(m_vlc, qPrintable(source()));
-		libvlc_media_add_option(m_vlcMedia, ":network-caching=500");
+		libvlc_media_add_option(m_vlcMedia, ":network-caching=2000");
 	} else {
 		m_vlcMedia = libvlc_media_new_path(m_vlc, qPrintable(source()));
 	}
@@ -105,12 +107,12 @@ int VLCItem::allocate(char *chroma, unsigned *width, unsigned *height, unsigned 
 	memcpy(chroma, "I420", 4);
 #endif
 
-	// int w = QQuickItem::width();
-	// int h = QQuickItem::height();
-	// if (w % 4) w -= w % 4;
-	// if (h % 4) h -= h % 4;
-	// *width = w;
-	// *height = h;
+	int w = QQuickItem::width();
+	int h = QQuickItem::height();
+	if (w % 4) w -= w % 4;
+	if (h % 4) h -= h % 4;
+	*width = w;
+	*height = h;
 	// *height = 288;
 	Q_ASSERT(*width % 2 == 0);
 	Q_ASSERT(*height % 2 == 0);
@@ -186,10 +188,9 @@ void VLCItem::unlock(void *picture, void *const *)
 }
 
 
-void VLCItem::display(void *)
+void VLCItem::display(void *picture)
 {
-	if (m_displayQueue.size() == 0)
-		return;
+	unlock(picture, 0);
 
 	// Use a signal/slot connection so QQuickItem::update gets called on the
 	// GUI thread.
@@ -205,7 +206,7 @@ public:
 	{
 	}
 
-	virtual void update(const QImage &plane)
+	virtual void update(const QImage &plane, int w, int h)
 	{
 		QOpenGLFunctions *gl = QOpenGLContext::currentContext()->functions();
 
@@ -220,7 +221,31 @@ public:
 			gl->glBindTexture(GL_TEXTURE_2D, m_id);
 		}
 
+#if 0
+		if (m_data.size() != w * h) {
+			m_data.resize(w * h);
+			m_data.fill(0);
+		}
+
+		// Quick and cheap nearest neighboor downscaling using 22.10 fixed
+		// point math.
+		int sx = (plane.width() << 10) / w;
+		int sy = (plane.height() << 10) / h;
+		char *data = m_data.data();
+		for (int y=0; y<h; ++y) {
+			const uchar *src = plane.constScanLine((y * sy) >> 10);
+			uchar *dst = (uchar *) (data + y * w);
+			int px = 0;
+			for (int x=0; x<w; ++x) {
+				dst[x] = src[px >> 10];
+				px += sx;
+			}
+		}
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+#else
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, plane.width(), plane.height(), 0, GL_RED, GL_UNSIGNED_BYTE, plane.constBits());
+#endif
+		m_size = QSize(w, h);
 	}
 
 	int textureId() const Q_DECL_OVERRIDE { return m_id; }
@@ -230,6 +255,7 @@ public:
     void bind() Q_DECL_OVERRIDE  { glBindTexture(GL_TEXTURE_2D, m_id); }
 
 protected:
+	QByteArray m_data;
 	unsigned int m_id;
 	QSize m_size;
 };
@@ -383,14 +409,17 @@ QSGNode *VLCItem::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
 
 	// QElapsedTimer timer; timer.start();
 
+	int w = qMin<int>(width(), frame.y.width());
+	int h = qMin<int>(height(), frame.y.height());
+
 	// Push the new frame data into textures
-	node->planes.y->update(frame.y);
-	node->planes.u->update(frame.u);
-	node->planes.v->update(frame.v);
+	node->planes.y->update(frame.y, w, h);
+	node->planes.u->update(frame.u, w / 2, h / 2);
+	node->planes.v->update(frame.v, w / 2, h / 2);
 	node->markDirty(QSGNode::DirtyMaterial);
 
+	// qDebug() << "uploaded in" << timer.nsecsElapsed() / 1000000.0 << frame.y.size();
 #endif
-	// qDebug() << "uploaded in" << timer.nsecsElapsed() / 1000000.0;
 
 	// Now that the buffer is uploaded, give it back to the write queue.
 	m_writeQueueMutex.lock();
