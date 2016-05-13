@@ -1,5 +1,7 @@
 #include "vlcitem.h"
 
+// #define RGB_FRAMES
+
 VLCItem::VLCItem()
 	: m_vlcPlayer(0)
 	, m_vlcMedia(0)
@@ -23,20 +25,20 @@ static void *cb_lock(void *opaque, void **planes)
 {
 	VLCItem *self = (VLCItem *) (opaque);
 	void *picture = self->lock(planes);
-	// qDebug() << "VLC Callback: locked" << opaque << planes << picture;
+	qDebug() << "VLC Callback: locked	" << opaque << planes << picture;
 	return picture;
 }
 
 static void cb_unlock(void *opaque, void *picture, void *const *planes)
 {
-	// qDebug() << "VLC Callback: unlock" << opaque << picture << planes;
+	qDebug() << "VLC Callback: unlock" << opaque << picture << planes;
 	VLCItem *self = (VLCItem *) (opaque);
 	return self->unlock(picture, planes);
 }
 
 static void cb_display(void *opaque, void *picture)
 {
-	// qDebug() << "VLC Callback: display" << opaque << picture;
+	qDebug() << "VLC Callback: display" << opaque << picture;
 	VLCItem *self = (VLCItem *) opaque;
 	self->display(picture);
 }
@@ -68,8 +70,7 @@ void VLCItem::updatePolish()
  	qDebug() << "VLC:";
 
 	const char *vlcArgv[] = {
-		"--no-audio",
-		"--no-xlib"
+		"--no-audio"
 	};
 	int vlcArgc = sizeof(vlcArgv) / sizeof(*vlcArgv);
  	m_vlc = libvlc_new(vlcArgc, vlcArgv);
@@ -79,7 +80,7 @@ void VLCItem::updatePolish()
 
  	if (source().startsWith(QStringLiteral("rtsp://"))) {
  		m_vlcMedia = libvlc_media_new_location(m_vlc, qPrintable(source()));
-		libvlc_media_add_option(m_vlcMedia, ":network-caching=32");
+		libvlc_media_add_option(m_vlcMedia, ":network-caching=500");
 	} else {
 		m_vlcMedia = libvlc_media_new_path(m_vlc, qPrintable(source()));
 	}
@@ -98,36 +99,49 @@ void VLCItem::updatePolish()
 
 int VLCItem::allocate(char *chroma, unsigned *width, unsigned *height, unsigned *pitches, unsigned *lines)
 {
-	if (chroma != QByteArray("I420")) {
-		qDebug() << "Incompatible video encoding" << chroma;
-		return 0;
-	}
+#ifdef RGB_FRAMES
+	memcpy(chroma, "RV32", 4);
+#else
+	memcpy(chroma, "I420", 4);
+#endif
 
-	const int POOL_SIZE = 1;
-
+	// int w = QQuickItem::width();
+	// int h = QQuickItem::height();
+	// if (w % 4) w -= w % 4;
+	// if (h % 4) h -= h % 4;
+	// *width = w;
+	// *height = h;
+	// *height = 288;
 	Q_ASSERT(*width % 2 == 0);
 	Q_ASSERT(*height % 2 == 0);
 
+	const int POOL_SIZE = 5;
 	for (int i=0; i<POOL_SIZE; ++i) {
 		VLCFrame frame;
+#ifdef RGB_FRAMES
+		frame.rgb = QImage(*width, *height, QImage::Format_RGB32);
+#else
 		frame.y = QImage(*width, *height, QImage::Format_Grayscale8);
 		frame.u = QImage(*width / 2, *height / 2, QImage::Format_Grayscale8);
 		frame.v = QImage(*width / 2, *height / 2, QImage::Format_Grayscale8);
+#endif
 		m_frames.append(frame);
 		m_writeQueue.append(frame);
 	}
 
 	const VLCFrame &frame = m_frames.first();
 
+#ifdef RGB_FRAMES
+	pitches[0] = frame.rgb.bytesPerLine();
+	lines[0] = frame.rgb.height();
+#else
 	pitches[0] = frame.y.bytesPerLine();
 	pitches[1] = frame.u.bytesPerLine();
 	pitches[2] = frame.v.bytesPerLine();
-
 	lines[0] = frame.y.height();
 	lines[1] = frame.u.height();
 	lines[2] = frame.v.height();
-
-	qDebug(" - pitches [0]=%d/%x, [1]=%d/%x, [2]=%d/%x", pitches[0], pitches[0], pitches[1], pitches[1], pitches[2], pitches[2]);
+#endif
 
 	return POOL_SIZE;
 }
@@ -145,11 +159,15 @@ void *VLCItem::lock(void **planes)
 	VLCFrame frame = m_writeQueue.dequeue();
 
 	// Using constBits to avoid internal detach() and deep copy.
+#ifdef RGB_FRAMES
+	planes[0] = (void *) frame.rgb.constBits();
+#else
 	planes[0] = (void *) frame.y.constBits();
 	planes[1] = (void *) frame.u.constBits();
 	planes[2] = (void *) frame.v.constBits();
+#endif
 
-	qDebug(" - planes [0]=%p, [1]=%p, [2]=%p", planes[0], planes[1], planes[2]);
+	// qDebug(" - planes [0]=%p, [1]=%p, [2]=%p", planes[0], planes[1], planes[2]);
 
 	return planes[0];
 }
@@ -157,7 +175,7 @@ void *VLCItem::lock(void **planes)
 void VLCItem::unlock(void *picture, void *const *)
 {
 	foreach (const VLCFrame &f, m_frames) {
-		if (f.y.constBits() == picture) {
+		if (f.y.constBits() == picture || f.rgb.constBits() == picture) {
 			m_displayQueueMutex.lock();
 			m_displayQueue.enqueue(f);
 			m_displayQueueMutex.unlock();
@@ -170,7 +188,8 @@ void VLCItem::unlock(void *picture, void *const *)
 
 void VLCItem::display(void *)
 {
-	Q_ASSERT(m_displayQueue.size() > 0);
+	if (m_displayQueue.size() == 0)
+		return;
 
 	// Use a signal/slot connection so QQuickItem::update gets called on the
 	// GUI thread.
@@ -337,6 +356,17 @@ QSGNode *VLCItem::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
 	}
 	m_displayQueueMutex.unlock();
 
+#ifdef RGB_FRAMES
+	QSGSimpleTextureNode *node = static_cast<QSGSimpleTextureNode *>(old);
+	if (!node) {
+		node = new QSGSimpleTextureNode();
+		node->setRect(0, 0, width(), height());
+	}
+
+	QSGTexture *texture = window()->createTextureFromImage(frame.rgb);
+	texture->bind();
+	node->setTexture(texture);
+#else
 	I420Node *node = static_cast<I420Node *>(old);
 	if (!node) {
 		node = new I420Node();
@@ -357,7 +387,9 @@ QSGNode *VLCItem::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
 	node->planes.y->update(frame.y);
 	node->planes.u->update(frame.u);
 	node->planes.v->update(frame.v);
+	node->markDirty(QSGNode::DirtyMaterial);
 
+#endif
 	// qDebug() << "uploaded in" << timer.nsecsElapsed() / 1000000.0;
 
 	// Now that the buffer is uploaded, give it back to the write queue.
@@ -366,7 +398,6 @@ QSGNode *VLCItem::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
 	m_writeQueueCondition.wakeOne();
 	m_writeQueueMutex.unlock();
 
-	node->markDirty(QSGNode::DirtyMaterial);
 
 	return node;
 }

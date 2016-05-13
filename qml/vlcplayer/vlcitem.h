@@ -10,6 +10,7 @@ struct VLCFrame
 	QImage y;
 	QImage u;
 	QImage v;
+	QImage rgb;
 };
 
 class VLCItem : public QQuickItem
@@ -52,6 +53,5 @@ private:
 
 	QQueue<VLCFrame> m_displayQueue;
 	QMutex m_displayQueueMutex;
-
 };
 

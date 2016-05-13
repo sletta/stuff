@@ -5,8 +5,8 @@ Item
 {
 	id: root
 
-	width: 1280
-	height: 720
+	width: 640
+	height: 360
 
 	Grid {
 		id: grid
@@ -17,7 +17,8 @@ Item
 		Repeater {
 			model: grid.rows * grid.columns
 			VLCItem {
-				source: "movie.mp4"
+				// source: "movie.mp4"
+				source: "rtsp://localhost:8554/stream"
 				width: grid.width / grid.columns
 				height: grid.height / grid.rows
 			}
