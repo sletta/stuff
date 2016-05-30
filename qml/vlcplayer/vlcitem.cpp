@@ -4,13 +4,18 @@
 
 VLCItem::VLCItem()
 	: m_vlcPlayer(0)
-	, m_vlcMedia(0)
 	, m_vlc(0)
 {
 	setFlag(ItemHasContents, true);
 	connect(this, &VLCItem::timeToUpdate, this, &QQuickItem::update);
 }
 
+VLCItem::~VLCItem()
+{
+	libvlc_media_player_stop(m_vlcPlayer);
+	libvlc_media_player_release(m_vlcPlayer);
+	libvlc_release(m_vlc);
+}
 
 void VLCItem::setSource(const QString &source)
 {
@@ -77,20 +82,21 @@ void VLCItem::updatePolish()
 	int vlcArgc = sizeof(vlcArgv) / sizeof(*vlcArgv);
  	m_vlc = libvlc_new(vlcArgc, vlcArgv);
  	qDebug() << " - instance:" << m_vlc;
+    libvlc_log_set(m_vlc, cb_log, 0);
 
- 	libvlc_log_set(m_vlc, cb_log, 0);
+ 	libvlc_media_t *media;
 
  	if (source().startsWith(QStringLiteral("rtsp://"))) {
- 		m_vlcMedia = libvlc_media_new_location(m_vlc, qPrintable(source()));
-		libvlc_media_add_option(m_vlcMedia, ":network-caching=2000");
+ 		media = libvlc_media_new_location(m_vlc, qPrintable(source()));
+        libvlc_media_add_option(media, ":network-caching=2000");
 	} else {
-		m_vlcMedia = libvlc_media_new_path(m_vlc, qPrintable(source()));
+		media = libvlc_media_new_path(m_vlc, qPrintable(source()));
 	}
-	qDebug() << " - media:" << m_vlcMedia;
+	qDebug() << " - media:" << media;
 
-	m_vlcPlayer = libvlc_media_player_new_from_media(m_vlcMedia);
+	m_vlcPlayer = libvlc_media_player_new_from_media(media);
 	qDebug() << " - player:" << m_vlcPlayer;
-	libvlc_media_release(m_vlcMedia);
+	libvlc_media_release(media);
 
 	libvlc_video_set_callbacks(m_vlcPlayer, cb_lock, cb_unlock, cb_display, this);
 	libvlc_video_set_format_callbacks(m_vlcPlayer, cb_videoFormat, cb_cleanup);

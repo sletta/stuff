@@ -21,6 +21,7 @@ class VLCItem : public QQuickItem
 
 public:
 	VLCItem();
+	~VLCItem();
 
 	QString source() const { return m_source; }
 	void setSource(const QString &source);
@@ -42,7 +43,6 @@ private:
 	QString m_source;
 
 	libvlc_media_player_t *m_vlcPlayer;
-	libvlc_media_t *m_vlcMedia;
 	libvlc_instance_t *m_vlc;
 
 	QVector<VLCFrame> m_frames;
