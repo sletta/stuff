@@ -34,6 +34,8 @@ protected:
     int cellSpacing() const { return m_cellSpacing; }
     void setCellSpacing(int spacing) { if (m_cellSpacing != spacing) { m_cellSpacing = spacing; emit cellSpacingChanged(); } }
 
+    Q_INVOKABLE void polishNow() { updatePolish(); }
+
 signals:
     void rowChanged();
     void modelChanged();

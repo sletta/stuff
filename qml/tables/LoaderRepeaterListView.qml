@@ -26,7 +26,19 @@ ListView {
                 Loader {
 
                     sourceComponent: {
-                        var type = eval("columnType" + index);
+                        var type = -1;
+                        switch (index) {
+                            case 0: type = columnType0; break;
+                            case 1: type = columnType1; break;
+                            case 2: type = columnType2; break;
+                            case 3: type = columnType3; break;
+                            case 4: type = columnType4; break;
+                            case 5: type = columnType5; break;
+                            case 6: type = columnType6; break;
+                            case 7: type = columnType7; break;
+                            case 8: type = columnType8; break;
+                            case 9: type = columnType9; break;
+                        }
                         switch (type) {
                             case 0: return comp0;
                             case 1: return comp1;

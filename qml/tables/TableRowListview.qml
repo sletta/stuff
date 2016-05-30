@@ -20,6 +20,7 @@ ListView {
         cellSpacing: listView.cellSpacing;
         model: tableModel;
         row: index
+        Component.onCompleted: polishNow();
     }
 
 }
