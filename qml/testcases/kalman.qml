@@ -2,12 +2,14 @@ import QtQuick 2.4
 
 // Implementation based on: http://roxlu.com/2015/051/kalman-filter
 
-Item
+Rectangle
 {
     id: root
 
-    width: 480
-    height: 320
+    width: 1280
+    height: 720
+
+    color: "black"
 
     property var sourcePoints: [];
 
@@ -17,15 +19,24 @@ Item
         var pts = []
         var cx = width / 2
         var cy = height / 2
-        var radius = 0.8
+        var radius = 0.9
         var error = 20
 
+        // for (var i=0; i<100; ++i) {
+        //         var t = i / 150
+        //         pts[i] = {
+        //             x: cx + radius * cx * Math.cos(t * Math.PI * 2) + Math.random() * error,
+        //             y: cy + radius * cy * Math.sin(t * Math.PI * 2) + Math.random() * error
+        //         }
+        // }
         for (var i=0; i<100; ++i) {
-                var t = i / 150
-                pts[i] = {
-                    x: cx + radius * cx * Math.cos(t * Math.PI * 2) + Math.random() * error,
-                    y: cy + radius * cy * Math.sin(t * Math.PI * 2) + Math.random() * error
-                }
+            var t = i/100
+            // if (i % 33 == 15)
+            //     t += 1/100;
+            pts[i] = {
+                x: cx - cx * radius + 2 * cx * radius * t  + Math.random() * error,
+                y: cy + radius * 0.7 * cy * Math.sin(t * Math.PI * 2) + Math.random() * error
+            }
         }
         return pts
     }
@@ -61,9 +72,11 @@ Item
         onPaint: {
             var ctx = getContext("2d")
 
-            ctx.fillStyle = "rgb(127, 0, 0)"
-            ctx.strokeStyle = "black"
+            ctx.fillStyle = "rgb(100, 0, 0)"
+            ctx.strokeStyle = "rgb(100, 100, 100)"
             ctx.lineWidth = 0.5
+
+            ctx.globalCompositeOperation = "lighter"
 
             var data = root.createData(width, height)
 
@@ -77,30 +90,45 @@ Item
             for (var i=0; i<data.length; ++i) {
                 var pt = data[i]
                 ctx.beginPath()
-                ctx.arc(pt.x, pt.y, 2, 0, 2 * Math.PI * 2, false)
+                ctx.arc(pt.x, pt.y, 3, 0, 2 * Math.PI * 2, false)
                 ctx.fill()
             }
 
-
+            // return;
 
             var xFilter = root.createFilter()
             var yFilter = root.createFilter()
 
+            var smoothed = []
+
             ctx.beginPath()
             for (var i=0; i<data.length; ++i) {
                 var pt = data[i]
+                var x = 0;
+                var y = 0;
                 if (i == 0) {
-                    xFilter.x = pt.x
-                    yFilter.x = pt.y
+                    x = xFilter.x = pt.x
+                    y = yFilter.x = pt.y
+                } else {
+                    x = xFilter.compute(pt.x)
+                    y = yFilter.compute(pt.y)
                 }
-                var x = xFilter.compute(pt.x);
-                var y = yFilter.compute(pt.y);
+                smoothed[i] = { x: x, y: y }
                 // print(i + ": " + x + "," + y)
-                ctx.lineTo(x, y);
+                ctx.lineTo(x, y)
             }
             ctx.strokeStyle = "blue"
             ctx.lineWidth = 2
-            ctx.stroke();
+            ctx.stroke()
+
+            ctx.fillStyle = "rgb(0, 255, 0)"
+            for (var i=0; i<smoothed.length; ++i) {
+                var pt = smoothed[i]
+                ctx.beginPath()
+                ctx.arc(pt.x, pt.y, 2, 0, 2 * Math.PI * 2, false)
+                ctx.fill()
+            }
+
 
         }
     }
