@@ -13,32 +13,30 @@ Rectangle
 
     color: "black"
 
-    property var sourcePoints: [];
-
-    property var errorRatio: 20
-
-    property var dT: 0.01
-
     function createData(w, h) {
 
-        var pts = []
+        var samples = []
 
         var start = 100
         var end = width - 100
 
         var steps = 50
         var w = end - start
+        var dt = 0.01
 
         for (var i=0; i<steps; ++i) {
             var t = i/(steps - 1)
-            pts[i] = {}
 
-            // pts[i] = { x: start + (Math.sin(t * Math.PI - Math.PI / 2) * 0.5 + 0.5) * w }
-            // pts[i].v = i == 0 ? 0 : (pts[i].x - pts[i-1].x) / dT
+            var sample = {}
+            sample.time = i * dt;
+            sample.value = start + (Math.sin(t * Math.PI - Math.PI / 2) * 0.5 + 0.5) * w
+
+            sample.velocity = i == 0 ? 0 : (sample.value - samples[i-1].value) / dt
+
+            samples[i] = sample
         }
 
-
-        return pts
+        return samples
     }
 
     function createSimpleFilter() {
@@ -65,38 +63,108 @@ Rectangle
         return filter
     }
 
-
-    function filterData_simple(source) {
-        var result = []
-        var filter = createSimpleFilter()
-        filter.x = source[0].x
-        for (var i=0; i<source.length; ++i)
-            result[i] = { x: filter.compute(source[i].x),
-                          v: 0
-                        }
-        return result
+    function getFilterSamples(source)
+    {
+        var interval = 1000.0 / 60000.0
+        var samples = []
+        var current = source[0]
+        var next = source[1]
+        var time = source[0].time
+        for (var i=1; i<source.length; ++i) {
+            next = source[i]
+            if (current.time <= time && next.time > time) {
+                samples.push( {
+                    value: current.value,
+                    velocity: current.velocity,
+                    time: current.time,
+                    source: current,
+                    sourceIndex: i - 1
+                } );
+                time += interval
+            }
+            current = next
+        }
+        return samples
     }
 
-    function filterData_v(source) {
+    function filterData_simple(samples) {
+        samples = getFilterSamples(samples)
+        var filter = createSimpleFilter()
+        filter.x = samples[0].value
+        for (var i=0; i<samples.length; ++i) {
+            var s = samples[i]
+            s.value = filter.compute(samples[i].value)
+        }
+        return samples
+    }
+
+    function filterData_v(samples, prediction) {
+        samples = getFilterSamples(samples)
         var filtered = []
 
-        var F = new M.mat2(1, dT,
+        var dT = 1000.0 / 60000.0
+
+        var A = new M.mat2(1, dT,
                            0, 1)
-        var K = new M.mat2(0.5, 0,
-                           0, 0.5)
-        filtered[0] = new M.vec2(source[0].x, source[0].v)
+        var P = new M.mat2(0, 0,
+                           0, 0)
+        var Q = new M.mat2(0.0, 0.0,
+                           0.0, 0.1)
+        var R = new M.mat2(0.1, 0.0,
+                           0.0, 0.1)
+        var H = new M.mat2(1, 0,
+                           0, 1)
+        var I = new M.mat2(1, 0, 0, 1)
+        var s = new M.vec2(samples[0].value,
+                           samples[0].velocity)
+        var x = new M.vec2(s.x, s.y)
 
-        for (var i=1; i<source.length; ++i) {
+        filtered[0] = {
+            time: samples[0].time,
+            value: samples[0].value,
+            sourceIndex: samples[0].sourceIndex,
+            source: samples[0],
+            velocity: samples[0].velocity
+        }
 
-            var last = filtered[i-1]
+        for (var i=1; i<samples.length; ++i) {
 
-            var predNext = F.multiplyWithVector(new M.vec2(last.x, last.y))
+            // print("iteration: " + i)
+            // print(" - source: position=" + samples[i].value + ", velocity=" + samples[i].velocity + " (" + (samples[i].velocity * dT) + ")")
 
-            var measured = new M.vec2(source[i].x, source[i].v)
-            var diff = measured.subtract(predNext)
+            // Prediction step
+            x = A.multiplyVector(x)
+            P = A.multiply(P).multiply(A.transpose()).add(Q)
 
-            filtered[i] = last.add(K.multiplyWithVector(diff))
-            filtered[i].x += 0.007 * filtered[i].y
+            // print(" - x=" + x)
+            // print(" - P=" + P)
+
+            // Correction step
+            var S = H.multiply(P).multiply(H.transpose()).add(R)
+            // print(" - S=" + S)
+
+            var K = P.multiply(H.transpose()).multiply(S.invert())
+            // print(" - K=" + K)
+            var m = new M.vec2(samples[i].value, samples[i].velocity)
+            // print(" - m=" + m)
+
+            var y = m.subtract(H.multiplyVector(x))
+            // print(" - y=" + y)
+
+            x = x.add(K.multiplyVector(y))
+            // print(" - x=" + x)
+
+            P = I.subtract(K.multiply(H)).multiply(P)
+            // print(" - P=" + P)
+
+            // Write out the value...
+            filtered[i] = {
+                time: i * dT,
+                value: x.x + prediction * x.y,
+                velocity: x.y,
+                source: samples[i],
+                sourceIndex: samples[i].sourceIndex
+            }
         }
 
         return filtered
@@ -107,43 +175,51 @@ Rectangle
         id: canvas
         anchors.fill: parent
 
-        function drawDots(ctx, pos, source, sourceColor, filtered, filterColor) {
-
-            var distance = 40
-
-            // Draw lines between source points and filtered points
-            ctx.strokeStyle = "rgb(200, 200, 200)"
-            ctx.beginPath()
-            for (var i=0; i<Math.min(filtered.length, source.length); ++i) {
-                var f = filtered[i].x
-                var d = source[i].x
-                ctx.moveTo(d, pos)
-                ctx.lineTo(f, pos + distance)
-            }
-            ctx.stroke()
-
+        function drawDots(ctx, pos, dots, color) {
             // Draw the source point dots
-            ctx.fillStyle = sourceColor
-            for (var i=0; i<source.length; ++i) {
-                var pt = source[i].x
+            ctx.fillStyle = color
+            for (var i=0; i<dots.length; ++i) {
+                var pt = dots[i].value
                 ctx.beginPath()
                 ctx.arc(pt, pos, 2, 0, 2 * Math.PI, false)
                 ctx.fill()
             }
+        }
 
-            // Draw the filtered point dots
-            ctx.fillStyle = filterColor
-            for (var i=0; i<filtered.length; ++i) {
-                var pt = filtered[i].x
-                ctx.beginPath()
-                ctx.arc(pt, pos + distance, 2, 0, 2 * Math.PI, false)
-                ctx.fill()
+        function drawFiltered(ctx, pos, source, sourceColor, filtered, filterColor) {
+
+            var distance = 40
+
+            // Draw lines between source points and filtered points
+            ctx.strokeStyle = "rgb(20, 20, 20)"
+            ctx.beginPath()
+            for (var i=0; i<source.length; ++i) {
+                var d = source[i]
+                ctx.moveTo(d.value, pos)
+                ctx.lineTo(d.value, pos + distance)
             }
+            ctx.stroke()
+
+            // Draw lines between source points and filtered points
+            ctx.strokeStyle = "rgb(40, 40, 40)"
+            ctx.beginPath()
+            for (var i=0; i<filtered.length; ++i) {
+                var f = filtered[i]
+                var d = source[f.sourceIndex]
+                ctx.moveTo(d.value, pos)
+                ctx.lineTo(f.value, pos + distance)
+            }
+            ctx.stroke()
+
+
+            drawDots(ctx, pos, source, sourceColor)
+            drawDots(ctx, pos + distance, filtered, filterColor)
         }
 
         onPaint: {
             var ctx = getContext("2d")
 
+            ctx.save()
             ctx.clearRect(0, 0, width, height)
 
             ctx.lineWidth = 0.5
@@ -152,14 +228,22 @@ Rectangle
             var filterPos = 250
             var filterVPos = 150
 
+            var sampleColor = "rgb(50, 50, 200)"
+
             ctx.globalCompositeOperation = "lighter"
 
-            var data = root.createData(width, height)
-            var filtered = filterData_simple(data)
-            var filteredV = filterData_v(data)
+            var samples = root.createData(width, height)
+            var direct = getFilterSamples(samples)
+            var simple = filterData_simple(samples)
+            var filteredV = filterData_v(samples, 0)
+            var filteredVP = filterData_v(samples, 0.016)
 
-            drawDots(ctx, 100, data, "rgb(100, 100, 255)", filtered, "rgb(255, 100, 100)")
-            drawDots(ctx, 200, data, "rgb(100, 100, 255)", filteredV, "rgb(100, 255, 100)")
+            drawFiltered(ctx, 100, samples, sampleColor, direct, "rgb(200, 50, 50)")
+            drawFiltered(ctx, 200, samples, sampleColor, simple, "rgb(50, 200, 50)")
+            drawFiltered(ctx, 300, samples, sampleColor, filteredV, "rgb(50, 200, 200)")
+            drawFiltered(ctx, 400, samples, sampleColor, filteredVP, "rgb(200, 50, 200)")
+
+            ctx.restore()
         }
     }
 
@@ -169,7 +253,7 @@ Rectangle
         interval: 100
         onTriggered: canvas.requestPaint()
         repeat: true
-        running: true
+        running: false
     }
 
 }
