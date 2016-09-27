@@ -8,8 +8,8 @@ Rectangle
 {
     id: root
 
-    width: 1280
-    height: 720
+    width: 480
+    height: 320
 
     color: "black"
 
@@ -188,10 +188,10 @@ Rectangle
 
         function drawFiltered(ctx, pos, source, sourceColor, filtered, filterColor) {
 
-            var distance = 40
+            var distance = 25
 
             // Draw lines between source points and filtered points
-            ctx.strokeStyle = "rgb(20, 20, 20)"
+            ctx.strokeStyle = "rgb(40, 40, 40)"
             ctx.beginPath()
             for (var i=0; i<source.length; ++i) {
                 var d = source[i]
@@ -201,7 +201,7 @@ Rectangle
             ctx.stroke()
 
             // Draw lines between source points and filtered points
-            ctx.strokeStyle = "rgb(40, 40, 40)"
+            ctx.strokeStyle = "rgb(60, 60, 60)"
             ctx.beginPath()
             for (var i=0; i<filtered.length; ++i) {
                 var f = filtered[i]
@@ -238,10 +238,10 @@ Rectangle
             var filteredV = filterData_v(samples, 0)
             var filteredVP = filterData_v(samples, 0.016)
 
-            drawFiltered(ctx, 100, samples, sampleColor, direct, "rgb(200, 50, 50)")
-            drawFiltered(ctx, 200, samples, sampleColor, simple, "rgb(50, 200, 50)")
-            drawFiltered(ctx, 300, samples, sampleColor, filteredV, "rgb(50, 200, 200)")
-            drawFiltered(ctx, 400, samples, sampleColor, filteredVP, "rgb(200, 50, 200)")
+            drawFiltered(ctx, 60, samples, sampleColor, direct, "rgb(200, 50, 50)")
+            drawFiltered(ctx, 120, samples, sampleColor, simple, "rgb(50, 200, 50)")
+            drawFiltered(ctx, 180, samples, sampleColor, filteredV, "rgb(50, 200, 200)")
+            drawFiltered(ctx, 240, samples, sampleColor, filteredVP, "rgb(200, 50, 200)")
 
             ctx.restore()
         }
